@@ -1,0 +1,2 @@
+// API key routes — placeholder.
+export const PLACEHOLDER = true;

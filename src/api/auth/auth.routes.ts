@@ -1,0 +1,2 @@
+// Auth routes — placeholder.
+export const PLACEHOLDER = true;
