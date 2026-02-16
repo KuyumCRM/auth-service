@@ -1,5 +1,4 @@
 // Port interface for event publishing (e.g. Kafka).
 export interface IEventPublisher {
-  placeholder: boolean;
+  publish(eventType: string, payload: Record<string, unknown>): Promise<void>;
 }
-export const PLACEHOLDER = true;

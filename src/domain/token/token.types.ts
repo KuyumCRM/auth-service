@@ -16,6 +16,33 @@ export interface JwtPayload {
 export interface RefreshTokenMeta {
   userId: string;
   familyId: string;
-  deviceInfo: string;
+  deviceInfo: Record<string, unknown>;
+  expiresAt: Date;
+}
+
+/** Stored refresh token entity — maps to auth.refresh_tokens. */
+export interface RefreshToken {
+  id: string;
+  userId: string;
+  hash: string; // token_hash
+  familyId: string;
+  deviceInfo: Record<string, unknown>; // JSONB: { ua, ip, device_name }
+  expiresAt: Date;
+  rotatedAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface CreateRefreshTokenDto {
+  userId: string;
+  familyId: string;
+  deviceInfo: Record<string, unknown>;
+  expiresAt: Date;
+  hash: string;
+}
+
+export interface RotateTokenOpts {
+  oldHash: string;
+  newHash: string;
   expiresAt: Date;
 }

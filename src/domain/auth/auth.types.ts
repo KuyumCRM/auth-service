@@ -30,3 +30,16 @@ export interface LoginCredentials {
   password: string;
   mfaCode?: string;
 }
+
+/** Input for creating a user (id, createdAt, updatedAt are DB-generated). */
+export interface CreateUserDto {
+  tenantId: string;
+  email: string;
+  passwordHash?: string | null;
+  emailVerified?: boolean;
+  mfaSecret?: string | null;
+  mfaEnabled?: boolean;
+  lastLoginAt?: Date | null;
+  loginCount?: number;
+  isActive?: boolean;
+}
