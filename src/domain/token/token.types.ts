@@ -41,6 +41,13 @@ export interface CreateRefreshTokenDto {
   hash: string;
 }
 
+export interface IssueTokenOpts {
+  userId: string;
+  tenantId: string;
+  email: string;
+  deviceInfo: Record<string, unknown>;
+}
+
 export interface RotateTokenOpts {
   oldHash: string;
   newHash: string;

@@ -26,7 +26,7 @@ export class TokenRepository implements ITokenRepository {
   async findByHash(hash: string): Promise<RefreshToken | null> {
     const repository = AppDataSource.getRepository(RefreshTokenEntity);
     const entity = await repository.findOne({
-      where: { tokenHash: hash, revokedAt: IsNull() },
+      where: { tokenHash: hash },
     });
     return entity ? entityToRefreshToken(entity) : null;
   }

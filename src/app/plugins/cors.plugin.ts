@@ -1,6 +1,9 @@
-// CORS plugin — placeholder.
 import type { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 
-export async function corsPlugin(_app: FastifyInstance): Promise<void> {
-  // Plugin registration only; no logic.
+export async function corsPlugin(app: FastifyInstance): Promise<void> {
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+  });
 }

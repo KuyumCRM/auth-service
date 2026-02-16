@@ -29,6 +29,14 @@ function entityToIgConnection(entity: InstagramConnectionEntity): IgConnection {
 export class InstagramTokenRepository implements IInstagramTokenRepository {
   private readonly repository = AppDataSource.getRepository(InstagramConnectionEntity);
 
+  async findByUserId(userId: string): Promise<IgConnection[]> {
+    const entities = await this.repository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+    return entities.map(entityToIgConnection);
+  }
+
   async findByUserAndIgId(userId: string, igUserId: string): Promise<IgConnection | null> {
     const entity = await this.repository.findOne({
       where: { userId, igUserId },

@@ -5,6 +5,7 @@ import type {
 } from '../../domain/instagram/instagram.types.js';
 
 export interface IInstagramTokenRepository {
+  findByUserId(userId: string): Promise<IgConnection[]>;
   findByUserAndIgId(userId: string, igUserId: string): Promise<IgConnection | null>;
   findExpiringBefore(date: Date): Promise<IgConnection[]>;
   create(data: CreateIgConnectionDto): Promise<IgConnection>;

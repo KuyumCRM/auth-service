@@ -31,6 +31,17 @@ export interface LoginCredentials {
   mfaCode?: string;
 }
 
+export interface RegisterDto {
+  tenantId: string;
+  email: string;
+  password: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
 /** Input for creating a user (id, createdAt, updatedAt are DB-generated). */
 export interface CreateUserDto {
   tenantId: string;
