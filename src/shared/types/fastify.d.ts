@@ -1,10 +1,9 @@
 import 'fastify';
+import type { JwtPayload } from '../../domain/token/token.types.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: { sub: string; tenant_id?: string };
+    user?: JwtPayload;
     tenantId?: string;
   }
 }
-
-export {};
