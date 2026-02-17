@@ -40,9 +40,7 @@ export const BEARER_PREFIX = 'Bearer ';
 export const REFRESH_COOKIE_NAME = 'refreshToken';
 
 // ——— Domain TTL / expiry ———
-/** Invitation link validity in days. */
 export const INVITE_EXPIRY_DAYS = 7;
-/** Password reset token validity in hours. */
 export const PASSWORD_RESET_EXPIRY_HOURS = 1;
 
 // ——— Password policy ———

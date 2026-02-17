@@ -115,21 +115,22 @@ export async function createApp(): Promise<FastifyInstance> {
     instagramRepo,
   });
 
-  const tenantService = new TenantService(
+  const tenantService = new TenantService({
     tenantRepo,
     membershipRepo,
     eventPublisher,
-    auditRepo
-  );
+    auditRepo,
+  });
 
   const inviteBaseUrl = `${env.DASHBOARD_URL}/accept-invite`;
-  const invitationService = new InvitationService(
+  const invitationService = new InvitationService({
     invitationRepo,
     membershipRepo,
+    userRepo,
     emailSender,
     auditRepo,
-    inviteBaseUrl
-  );
+    inviteBaseUrl,
+  });
 
   const oauthStateStore = createOAuthStateStore(OAUTH_STATE_TTL_SEC);
   const encryption = createEncryption();
