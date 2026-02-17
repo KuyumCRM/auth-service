@@ -6,5 +6,8 @@ export function createStubEmailSender(): IEmailSender {
     async sendResetPasswordEmail(_to: string, _resetLink: string): Promise<void> {
       // No-op; replace with SES, SendGrid, etc.
     },
+    async sendInviteEmail(_to: string, _inviteLink: string): Promise<void> {
+      // No-op; replace with SES, SendGrid, etc.
+    },
   };
 }

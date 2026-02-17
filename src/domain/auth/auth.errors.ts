@@ -103,3 +103,13 @@ export class InvalidOnboardingTokenError extends AppError {
     Object.setPrototypeOf(this, InvalidOnboardingTokenError.prototype);
   }
 }
+
+/** Thrown when the requested user does not exist (e.g. GET /me with deleted user). */
+export class UserNotFoundError extends AppError {
+  readonly code = 'not_found' as const;
+  constructor(message = 'User not found') {
+    super(message, 404);
+    this.name = 'UserNotFoundError';
+    Object.setPrototypeOf(this, UserNotFoundError.prototype);
+  }
+}

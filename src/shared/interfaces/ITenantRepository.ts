@@ -1,11 +1,10 @@
 // Port interface for tenant CRUD + subscription data.
-import type { Tenant, CreateTenantDto, TenantStatus, TenantPlan } from '../../domain/tenant/tenant.types.js';
-
-export interface TenantSubscription {
-  tenantId: string;
-  tier: TenantPlan;
-  featureFlags: string[];
-}
+import type {
+  Tenant,
+  CreateTenantDto,
+  TenantStatus,
+  TenantSubscription,
+} from '../../domain/tenant/tenant.types.js';
 
 export interface ITenantRepository {
   findById(id: string): Promise<Tenant | null>;

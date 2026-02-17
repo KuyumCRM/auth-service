@@ -1,5 +1,6 @@
 // Real tenant repository backed by PostgreSQL.
-import type { ITenantRepository, TenantSubscription } from '../../../shared/interfaces/ITenantRepository.js';
+import type { ITenantRepository } from '../../../shared/interfaces/ITenantRepository.js';
+import type { TenantSubscription } from '../../../domain/tenant/tenant.types.js';
 import type { Tenant, CreateTenantDto, TenantStatus } from '../../../domain/auth/auth.types.js';
 import { AppDataSource } from '../data-source.js';
 import { TenantEntity } from '../entities/Tenant.entity.js';
@@ -76,11 +77,17 @@ export function createTenantRepository(): ITenantRepository {
     async getSubscription(tenantId: string): Promise<TenantSubscription> {
       const entity = await repository.findOne({ where: { id: tenantId } });
       if (!entity) {
-        return { tenantId, tier: 'starter', featureFlags: [] };
+        return {
+          tenantId,
+          plan: 'starter',
+          status: 'pending_verification',
+          featureFlags: [],
+        };
       }
       return {
         tenantId: entity.id,
-        tier: entity.plan as TenantSubscription['tier'],
+        plan: entity.plan as TenantSubscription['plan'],
+        status: entity.status as TenantSubscription['status'],
         featureFlags: entity.featureFlags,
       };
     },

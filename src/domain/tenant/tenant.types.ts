@@ -23,3 +23,10 @@ export interface CreateTenantDto {
   plan?: TenantPlan;
   featureFlags?: string[];
 }
+
+export interface TenantSubscription {
+  tenantId: string;
+  plan: TenantPlan;
+  status: TenantStatus;
+  featureFlags: string[];
+}

@@ -1,11 +1,19 @@
 // Fastify preHandler — verifies JWT, checks blacklist, attaches payload to request.
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { jwtVerify, importSPKI, type CryptoKey } from 'jose';
+import {
+  JWT_ALGORITHM_RS256,
+  BEARER_PREFIX,
+  ERROR_CODE_INVALID,
+  ERROR_CODE_BLACKLISTED,
+  ERROR_CODE_EXPIRED,
+  ERROR_MSG_MISSING_AUTH_HEADER,
+  ERROR_MSG_INVALID_TOKEN,
+  ERROR_MSG_TOKEN_REVOKED,
+  ERROR_MSG_TOKEN_EXPIRED,
+} from '../../config/constants.js';
 import type { ITokenBlacklist } from '../interfaces/ITokenBlacklist.js';
 import type { JwtPayload } from '../../domain/token/token.types.js';
-
-const RS256 = 'RS256';
-const BEARER_PREFIX = 'Bearer ';
 
 export interface AuthenticateGuardDeps {
   tokenBlacklist: ITokenBlacklist;
@@ -16,7 +24,7 @@ let cachedPublicKey: CryptoKey | null = null;
 
 async function getPublicKey(publicKeyPem: string): Promise<CryptoKey> {
   if (!cachedPublicKey) {
-    cachedPublicKey = await importSPKI(publicKeyPem, RS256);
+    cachedPublicKey = await importSPKI(publicKeyPem, JWT_ALGORITHM_RS256);
   }
   return cachedPublicKey;
 }
@@ -31,38 +39,38 @@ export function createAuthenticateGuard(deps: AuthenticateGuardDeps) {
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith(BEARER_PREFIX)) {
       return reply.status(401).send({
-        error: 'Missing or invalid Authorization header',
-        code: 'invalid',
+        error: ERROR_MSG_MISSING_AUTH_HEADER,
+        code: ERROR_CODE_INVALID,
       });
     }
 
     const token = authHeader.slice(BEARER_PREFIX.length).trim();
     if (!token) {
       return reply.status(401).send({
-        error: 'Invalid token',
-        code: 'invalid',
+        error: ERROR_MSG_INVALID_TOKEN,
+        code: ERROR_CODE_INVALID,
       });
     }
 
     try {
       const publicKey = await getPublicKey(publicKeyPem);
       const { payload } = await jwtVerify(token, publicKey, {
-        algorithms: [RS256],
+        algorithms: [JWT_ALGORITHM_RS256],
       });
 
       const jti = payload.jti as string | undefined;
       if (!jti) {
         return reply.status(401).send({
-          error: 'Invalid token',
-          code: 'invalid',
+          error: ERROR_MSG_INVALID_TOKEN,
+          code: ERROR_CODE_INVALID,
         });
       }
 
       const blacklisted = await tokenBlacklist.has(jti);
       if (blacklisted) {
         return reply.status(401).send({
-          error: 'Token revoked',
-          code: 'blacklisted',
+          error: ERROR_MSG_TOKEN_REVOKED,
+          code: ERROR_CODE_BLACKLISTED,
         });
       }
 
@@ -72,13 +80,13 @@ export function createAuthenticateGuard(deps: AuthenticateGuardDeps) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('expired') || message.includes('JWT Expired')) {
         return reply.status(401).send({
-          error: 'Token expired',
-          code: 'expired',
+          error: ERROR_MSG_TOKEN_EXPIRED,
+          code: ERROR_CODE_EXPIRED,
         });
       }
       return reply.status(401).send({
-        error: 'Invalid token',
-        code: 'invalid',
+        error: ERROR_MSG_INVALID_TOKEN,
+        code: ERROR_CODE_INVALID,
       });
     }
   };

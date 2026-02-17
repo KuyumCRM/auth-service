@@ -34,6 +34,61 @@ export const ROUTE_HEALTH = '/health';
 export const ROUTE_ONBOARD_CONNECT = '/onboard-connect';
 export const ROUTE_ONBOARD_CALLBACK = '/onboard-callback';
 
+// ——— JWT / Auth ———
+export const JWT_ALGORITHM_RS256 = 'RS256';
+export const BEARER_PREFIX = 'Bearer ';
+export const REFRESH_COOKIE_NAME = 'refreshToken';
+
+// ——— Domain TTL / expiry ———
+/** Invitation link validity in days. */
+export const INVITE_EXPIRY_DAYS = 7;
+/** Password reset token validity in hours. */
+export const PASSWORD_RESET_EXPIRY_HOURS = 1;
+
+// ——— Password policy ———
+export const BCRYPT_COST = 12;
+export const PASSWORD_MIN_LENGTH = 12;
+
+// ——— Auth API route paths (relative to API_V1_AUTH_PREFIX) ———
+export const ROUTE_SIGNUP = '/signup';
+export const ROUTE_ACCEPT_INVITE = '/accept-invite';
+export const ROUTE_LOGIN = '/login';
+export const ROUTE_REFRESH = '/refresh';
+export const ROUTE_FORGOT_PASSWORD = '/forgot-password';
+export const ROUTE_RESET_PASSWORD = '/reset-password';
+export const ROUTE_VERIFY_EMAIL = '/verify-email';
+export const ROUTE_SWITCH_TENANT = '/switch-tenant';
+export const ROUTE_LOGOUT = '/logout';
+export const ROUTE_ME = '/me';
+
+// ——— Tenant API route paths (relative to API_V1_TENANT_PREFIX) ———
+export const ROUTE_TENANT_INVITE = '/invite';
+export const ROUTE_TENANT_INVITATIONS = '/invitations';
+export const ROUTE_TENANT_MEMBERS = '/members';
+
 // ——— Error codes (API responses) ———
+export const ERROR_CODE_APP_ERROR = 'app_error';
+export const ERROR_CODE_INVALID_CREDENTIALS = 'invalid_credentials';
+export const ERROR_CODE_ACCOUNT_LOCKED = 'account_locked';
 export const ERROR_CODE_OAUTH_EXCHANGE_FAILED = 'oauth_exchange_failed';
 export const ERROR_CODE_INTERNAL = 'internal';
+export const ERROR_CODE_INVALID = 'invalid';
+export const ERROR_CODE_NOT_FOUND = 'not_found';
+export const ERROR_CODE_UNAUTHORIZED = 'unauthorized';
+export const ERROR_CODE_FORBIDDEN = 'forbidden';
+export const ERROR_CODE_BLACKLISTED = 'blacklisted';
+export const ERROR_CODE_EXPIRED = 'expired';
+
+// ——— Error / success messages (API responses) ———
+export const ERROR_MSG_INTERNAL_SERVER = 'Internal server error';
+export const ERROR_MSG_INVALID_CREDENTIALS = 'Invalid credentials';
+export const ERROR_MSG_REFRESH_TOKEN_REQUIRED = 'Refresh token required';
+export const ERROR_MSG_USER_NOT_FOUND = 'User not found';
+export const ERROR_MSG_AUTH_REQUIRED = 'Authentication required';
+export const ERROR_MSG_INSUFFICIENT_PERMISSIONS = 'Insufficient permissions';
+export const ERROR_MSG_MISSING_AUTH_HEADER = 'Missing or invalid Authorization header';
+export const ERROR_MSG_INVALID_TOKEN = 'Invalid token';
+export const ERROR_MSG_TOKEN_REVOKED = 'Token revoked';
+export const ERROR_MSG_TOKEN_EXPIRED = 'Token expired';
+export const MESSAGE_PASSWORD_UPDATED = 'Password updated';
+export const MESSAGE_EMAIL_VERIFIED = 'Email verified';

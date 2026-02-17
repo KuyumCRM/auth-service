@@ -17,6 +17,7 @@ declare module 'fastify' {
     membershipRepo?: import('../../shared/interfaces/IMembershipRepository.js').IMembershipRepository;
     instagramRepo?: import('../../shared/interfaces/IInstagramTokenRepository.js').IInstagramTokenRepository;
     instagramOAuthService?: import('../../domain/instagram/instagram-oauth.service.js').InstagramOAuthService;
+    tokenBlacklist?: import('../../shared/interfaces/ITokenBlacklist.js').ITokenBlacklist;
     authenticateGuard?: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

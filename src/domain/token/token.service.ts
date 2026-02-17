@@ -2,28 +2,26 @@
 import * as crypto from 'crypto';
 import {
   SignJWT,
-  jwtVerify,
   importPKCS8,
-  importSPKI,
   type CryptoKey,
 } from 'jose';
 import type { ITokenRepository } from '../../shared/interfaces/ITokenRepository.js';
 import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
+import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
 import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
+import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
 import type { TokenPair } from '../auth/auth.types.js';
 import type {
-  JwtPayload,
   IssueTokenOpts,
   CreateRefreshTokenDto,
   RotateTokenOpts,
 } from './token.types.js';
+import { JWT_ALGORITHM_RS256 } from '../../config/constants.js';
 import {
   InvalidTokenError,
   TokenExpiredError,
   TokenReuseDetectedError,
 } from '../auth/auth.errors.js';
-
-const RS256 = 'RS256';
 
 export interface TokenServiceConfig {
   privateKeyPem: string;
@@ -32,33 +30,29 @@ export interface TokenServiceConfig {
   refreshTtlDays: number;
 }
 
+export interface TokenServiceDeps {
+  tokenRepo: ITokenRepository;
+  tenantRepo: ITenantRepository;
+  userRepo: IUserRepository;
+  membershipRepo: IMembershipRepository;
+  eventPublisher: IEventPublisher;
+  config: TokenServiceConfig;
+}
+
 export class TokenService {
-  constructor(
-    private readonly tokenRepo: ITokenRepository,
-    private readonly tenantRepo: ITenantRepository,
-    private readonly eventPublisher: IEventPublisher,
-    private readonly config: TokenServiceConfig
-  ) {}
+  constructor(private readonly deps: TokenServiceDeps) {}
 
   private static sha256(data: string): string {
     return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
   }
 
   private privateKey: CryptoKey | null = null;
-  private publicKey: CryptoKey | null = null;
 
   private async getPrivateKey(): Promise<CryptoKey> {
     if (!this.privateKey) {
-      this.privateKey = await importPKCS8(this.config.privateKeyPem, RS256);
+      this.privateKey = await importPKCS8(this.deps.config.privateKeyPem, JWT_ALGORITHM_RS256);
     }
     return this.privateKey;
-  }
-
-  private async getPublicKey(): Promise<CryptoKey> {
-    if (!this.publicKey) {
-      this.publicKey = await importSPKI(this.config.publicKeyPem, RS256);
-    }
-    return this.publicKey;
   }
 
   private addDays(date: Date, days: number): Date {
@@ -72,38 +66,37 @@ export class TokenService {
     const familyId = crypto.randomUUID();
     const tokenHash = TokenService.sha256(rawRefresh);
     const now = new Date();
-    const expiresAt = this.addDays(now, this.config.refreshTtlDays);
+    const expiresAt = this.addDays(now, this.deps.config.refreshTtlDays);
 
     const createDto: CreateRefreshTokenDto = {
       userId: opts.userId,
+      tenantId: opts.tenantId,
       familyId,
       hash: tokenHash,
-      deviceInfo: {
-        ...opts.deviceInfo,
-        email: opts.email,
-        tenantId: opts.tenantId,
-      },
+      deviceInfo: opts.deviceInfo,
       expiresAt,
     };
-    await this.tokenRepo.create(createDto);
+    await this.deps.tokenRepo.create(createDto);
 
-    const subscription = await this.tenantRepo.getSubscription(opts.tenantId);
+    const subscription = await this.deps.tenantRepo.getSubscription(opts.tenantId);
     const jti = crypto.randomUUID();
-    const exp = Math.floor(now.getTime() / 1000) + this.config.accessTtlSec;
+    const exp = Math.floor(now.getTime() / 1000) + this.deps.config.accessTtlSec;
     const iat = Math.floor(now.getTime() / 1000);
 
     const privateKey = await this.getPrivateKey();
     const accessToken = await new SignJWT({
       tenant_id: opts.tenantId,
       email: opts.email,
-      subscription_tier: subscription.tier,
+      role: opts.role,
+      tenant_status: opts.tenantStatus,
+      subscription_tier: subscription.plan,
       feature_flags: subscription.featureFlags,
     })
       .setSubject(opts.userId)
       .setJti(jti)
       .setIssuedAt(iat)
       .setExpirationTime(exp)
-      .setProtectedHeader({ alg: RS256 })
+      .setProtectedHeader({ alg: JWT_ALGORITHM_RS256 })
       .sign(privateKey);
 
     return { accessToken, refreshToken: rawRefresh };
@@ -111,15 +104,15 @@ export class TokenService {
 
   async rotateRefreshToken(rawToken: string): Promise<TokenPair> {
     const tokenHash = TokenService.sha256(rawToken);
-    const existing = await this.tokenRepo.findByHash(tokenHash);
+    const existing = await this.deps.tokenRepo.findByHash(tokenHash);
 
     if (!existing) {
       throw new InvalidTokenError();
     }
 
     if (existing.rotatedAt || existing.revokedAt) {
-      await this.tokenRepo.revokeFamilyById(existing.familyId);
-      await this.eventPublisher.publish('auth.token.family_revoked', {
+      await this.deps.tokenRepo.revokeFamilyById(existing.familyId);
+      await this.deps.eventPublisher.publish('auth.token.family_revoked', {
         userId: existing.userId,
         reason: 'reuse_detected',
       });
@@ -132,61 +125,64 @@ export class TokenService {
 
     const newRawToken = crypto.randomBytes(64).toString('hex');
     const newHash = TokenService.sha256(newRawToken);
-    const expiresAt = this.addDays(new Date(), this.config.refreshTtlDays);
+    const expiresAt = this.addDays(new Date(), this.deps.config.refreshTtlDays);
 
     const rotateOpts: RotateTokenOpts = {
       oldHash: tokenHash,
       newHash,
       expiresAt,
     };
-    const rotated = await this.tokenRepo.rotateToken(rotateOpts);
+    const rotated = await this.deps.tokenRepo.rotateToken(rotateOpts);
 
-    const device = rotated.deviceInfo as {
-      email?: string;
-      tenantId?: string;
-    } | undefined;
-    const tenantId = device?.tenantId ?? '';
-    const subscription = await this.tenantRepo.getSubscription(tenantId);
-    const email = device?.email ?? '';
+    const tenantId = rotated.tenantId;
+    const subscription = await this.deps.tenantRepo.getSubscription(tenantId);
+    if (!subscription) {
+      throw new InvalidTokenError("Tenant not found in the database");
+    }
+
+    const user = await this.deps.userRepo.findById(rotated.userId);
+    if (!user) {
+      throw new InvalidTokenError("User not found in the database");
+    }
+
+    const membership = await this.deps.membershipRepo.findByUserAndTenant(user.id, tenantId);
+    if (!membership) {
+      throw new InvalidTokenError("User is not a member of this tenant");
+    }
+    
     const jti = crypto.randomUUID();
     const now = new Date();
-    const exp = Math.floor(now.getTime() / 1000) + this.config.accessTtlSec;
+    const exp = Math.floor(now.getTime() / 1000) + this.deps.config.accessTtlSec;
     const iat = Math.floor(now.getTime() / 1000);
 
     const privateKey = await this.getPrivateKey();
     const accessToken = await new SignJWT({
-      tenant_id: subscription.tenantId,
-      email,
-      subscription_tier: subscription.tier,
+      tenant_id: tenantId,
+      email: user.email,
+      role: membership?.role ?? 'viewer',
+      tenant_status: subscription.status,
+      subscription_tier: subscription.plan,
       feature_flags: subscription.featureFlags,
     })
       .setSubject(rotated.userId)
       .setJti(jti)
       .setIssuedAt(iat)
       .setExpirationTime(exp)
-      .setProtectedHeader({ alg: RS256 })
+      .setProtectedHeader({ alg: JWT_ALGORITHM_RS256 })
       .sign(privateKey);
 
     return { accessToken, refreshToken: newRawToken };
   }
 
-  async verifyAccessToken(token: string): Promise<JwtPayload> {
-    const publicKey = await this.getPublicKey();
-    const { payload } = await jwtVerify(token, publicKey, {
-      algorithms: [RS256],
-    });
-    return payload as unknown as JwtPayload;
-  }
-
   async revokeToken(rawToken: string): Promise<void> {
     const tokenHash = TokenService.sha256(rawToken);
-    const existing = await this.tokenRepo.findByHash(tokenHash);
+    const existing = await this.deps.tokenRepo.findByHash(tokenHash);
     if (existing) {
-      await this.tokenRepo.revokeFamilyById(existing.familyId);
+      await this.deps.tokenRepo.revokeFamilyById(existing.familyId);
     }
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.tokenRepo.revokeAllForUser(userId);
+    await this.deps.tokenRepo.revokeAllForUser(userId);
   }
 }

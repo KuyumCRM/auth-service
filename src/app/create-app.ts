@@ -82,18 +82,19 @@ export async function createApp(): Promise<FastifyInstance> {
   const passwordService = new PasswordService();
   const totpService = new TotpService();
 
-  const tokenService = new TokenService(
+  const tokenService = new TokenService({
     tokenRepo,
     tenantRepo,
+    userRepo,
     membershipRepo,
     eventPublisher,
-    {
+    config: {
       privateKeyPem,
       publicKeyPem,
       accessTtlSec: env.JWT_ACCESS_TTL_SEC,
       refreshTtlDays: env.JWT_REFRESH_TTL_DAYS,
-    }
-  );
+    },
+  });
 
   const resetPasswordBaseUrl = `${env.DASHBOARD_URL}/reset-password`;
   const onboardingSessionStore = createOnboardingSessionStore();
@@ -153,6 +154,7 @@ export async function createApp(): Promise<FastifyInstance> {
   app.decorate('instagramRepo', instagramRepo);
   app.decorate('instagramOAuthService', instagramOAuthService);
   app.decorate('authenticateGuard', authenticateGuard);
+  app.decorate('tokenBlacklist', tokenBlacklist);
 
   await app.register(registerRoutes);
 

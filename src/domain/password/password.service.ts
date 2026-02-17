@@ -1,9 +1,7 @@
 // bcrypt hash/verify, policy enforcement.
 import * as bcrypt from 'bcrypt';
+import { BCRYPT_COST, PASSWORD_MIN_LENGTH } from '../../config/constants.js';
 import type { ValidationResult } from './password.types.js';
-
-const BCRYPT_COST = 12;
-const MIN_LENGTH = 12;
 
 export class PasswordService {
   async hash(password: string): Promise<string> {
@@ -16,8 +14,8 @@ export class PasswordService {
 
   validatePolicy(password: string): ValidationResult {
     const errors: string[] = [];
-    if (password.length < MIN_LENGTH) {
-      errors.push(`Password must be at least ${MIN_LENGTH} characters`);
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
     }
     if (!/[A-Z]/.test(password)) {
       errors.push('Password must contain at least one uppercase letter');

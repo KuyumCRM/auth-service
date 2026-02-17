@@ -55,7 +55,6 @@ export interface SignupResult {
   tenant: Tenant;
   membership: Membership;
   tokens: TokenPair;
-  tenants: MembershipInfo[];
 }
 
 export interface LoginResult {
@@ -115,4 +114,23 @@ export interface CreateMembershipDto {
   userId: string;
   tenantId: string;
   role: MembershipRole;
+}
+
+/** Shape of one IG connection in GET /me response. */
+export interface MeIgConnection {
+  id: string;
+  igUserId: string;
+  igUsername: string;
+  isActive: boolean;
+}
+
+/** Result of getMe use case: current user profile with tenant, role, memberships, IG connections. */
+export interface MeResult {
+  id: string;
+  email: string;
+  mfaEnabled: boolean;
+  currentTenant: Tenant | undefined;
+  currentRole: MembershipRole | undefined;
+  memberships: MembershipInfo[];
+  igConnections: MeIgConnection[];
 }
