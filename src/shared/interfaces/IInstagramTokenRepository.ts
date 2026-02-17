@@ -6,14 +6,6 @@ import type {
 
 export interface IInstagramTokenRepository {
   findByUserId(userId: string): Promise<IgConnection[]>;
-  findByUserAndIgId(userId: string, igUserId: string): Promise<IgConnection | null>;
-  findExpiringBefore(date: Date): Promise<IgConnection[]>;
+  findByIgUserId(igUserId: string): Promise<IgConnection | null>;
   create(data: CreateIgConnectionDto): Promise<IgConnection>;
-  updateToken(
-    id: string,
-    accessTokenEnc: string,
-    tokenIv: string,
-    tokenExpiresAt: Date
-  ): Promise<void>;
-  deactivate(id: string): Promise<void>;
 }
