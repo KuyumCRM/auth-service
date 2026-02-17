@@ -3,6 +3,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
   ERROR_CODE_OAUTH_EXCHANGE_FAILED,
   ERROR_CODE_INTERNAL,
+  ERROR_MSG_INTERNAL_SERVER,
 } from '../../config/constants.js';
 import {
   InstagramOAuthError,
@@ -32,7 +33,7 @@ function handleError(reply: FastifyReply, err: unknown): void {
     });
     return;
   }
-  reply.status(500).send({ error: 'Internal server error', code: ERROR_CODE_INTERNAL });
+  reply.status(500).send({ error: ERROR_MSG_INTERNAL_SERVER, code: ERROR_CODE_INTERNAL });
 }
 
 /** POST /onboard-connect — returns redirect URL and state for frontend to redirect user to Instagram. */

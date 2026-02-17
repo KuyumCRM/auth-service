@@ -1,6 +1,8 @@
 // Membership repository backed by PostgreSQL.
 import type { IMembershipRepository, MembershipWithTenant } from '../../../shared/interfaces/IMembershipRepository.js';
 import type { Membership, CreateMembershipDto, MembershipRole } from '../../../domain/auth/auth.types.js';
+import { MembershipAlreadyExistsError } from '../../../domain/auth/auth.errors.js';
+import { PG_UNIQUE_VIOLATION } from '../../../config/constants.js';
 import { AppDataSource } from '../data-source.js';
 import { MembershipEntity } from '../entities/Membership.entity.js';
 import { TenantEntity } from '../entities/Tenant.entity.js';
@@ -79,8 +81,17 @@ export function createMembershipRepository(): IMembershipRepository {
         tenantId: data.tenantId,
         role: data.role,
       });
-      const saved = await repository.save(entity);
-      return entityToMembership(saved);
+      try {
+        const saved = await repository.save(entity);
+        return entityToMembership(saved);
+      } catch (err: unknown) {
+        const code = (err as { code?: string; driverError?: { code?: string } })?.driverError?.code
+          ?? (err as { code?: string })?.code;
+        if (code === PG_UNIQUE_VIOLATION) {
+          throw new MembershipAlreadyExistsError();
+        }
+        throw err;
+      }
     },
 
     async updateRole(id: string, role: MembershipRole): Promise<Membership> {

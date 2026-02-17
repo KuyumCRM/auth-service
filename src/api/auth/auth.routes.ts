@@ -1,9 +1,25 @@
 import type { FastifyInstance } from 'fastify';
 import {
-  registerBody,
-  registerResponse201,
+  ROUTE_SIGNUP,
+  ROUTE_ACCEPT_INVITE,
+  ROUTE_LOGIN,
+  ROUTE_REFRESH,
+  ROUTE_FORGOT_PASSWORD,
+  ROUTE_RESET_PASSWORD,
+  ROUTE_VERIFY_EMAIL,
+  ROUTE_SWITCH_TENANT,
+  ROUTE_LOGOUT,
+  ROUTE_ME,
+} from '../../config/constants.js';
+import {
+  signupBody,
+  signupResponse201,
+  acceptInviteBody,
+  acceptInviteResponse201,
   loginBody,
   loginResponse200,
+  switchTenantBody,
+  switchTenantResponse200,
   refreshResponse200,
   logoutBody,
   forgotPasswordBody,
@@ -14,8 +30,10 @@ import {
   meResponse200,
 } from './auth.schema.js';
 import {
-  register,
+  signup,
+  acceptInvite,
   login,
+  switchTenant,
   refresh,
   logout,
   forgotPassword,
@@ -27,15 +45,24 @@ import {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const guard = app.authenticateGuard!;
 
-  app.post('/register', {
+  // Public routes (no auth)
+  app.post(ROUTE_SIGNUP, {
     schema: {
-      body: registerBody,
-      response: { 201: registerResponse201 },
+      body: signupBody,
+      response: { 201: signupResponse201 },
     },
-    handler: register,
+    handler: signup,
   });
 
-  app.post('/login', {
+  app.post(ROUTE_ACCEPT_INVITE, {
+    schema: {
+      body: acceptInviteBody,
+      response: { 201: acceptInviteResponse201 },
+    },
+    handler: acceptInvite,
+  });
+
+  app.post(ROUTE_LOGIN, {
     schema: {
       body: loginBody,
       response: { 200: loginResponse200 },
@@ -43,14 +70,48 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     handler: login,
   });
 
-  app.post('/refresh', {
+  app.post(ROUTE_REFRESH, {
     schema: {
       response: { 200: refreshResponse200 },
     },
     handler: refresh,
   });
 
-  app.post('/logout', {
+  app.post(ROUTE_FORGOT_PASSWORD, {
+    schema: {
+      body: forgotPasswordBody,
+      response: { 202: { type: 'null', description: 'Accepted' } },
+    },
+    handler: forgotPassword,
+  });
+
+  app.post(ROUTE_RESET_PASSWORD, {
+    schema: {
+      body: resetPasswordBody,
+      response: { 200: resetPasswordResponse200 },
+    },
+    handler: resetPassword,
+  });
+
+  app.post(ROUTE_VERIFY_EMAIL, {
+    schema: {
+      body: verifyEmailBody,
+      response: { 200: verifyEmailResponse200 },
+    },
+    handler: verifyEmail,
+  });
+
+  // Authenticated routes
+  app.post(ROUTE_SWITCH_TENANT, {
+    preHandler: [guard],
+    schema: {
+      body: switchTenantBody,
+      response: { 200: switchTenantResponse200 },
+    },
+    handler: switchTenant,
+  });
+
+  app.post(ROUTE_LOGOUT, {
     preHandler: [guard],
     schema: {
       body: logoutBody,
@@ -59,31 +120,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     handler: logout,
   });
 
-  app.post('/forgot-password', {
-    schema: {
-      body: forgotPasswordBody,
-      response: { 202: { type: 'null', description: 'Accepted' } },
-    },
-    handler: forgotPassword,
-  });
-
-  app.post('/reset-password', {
-    schema: {
-      body: resetPasswordBody,
-      response: { 200: resetPasswordResponse200 },
-    },
-    handler: resetPassword,
-  });
-
-  app.post('/verify-email', {
-    schema: {
-      body: verifyEmailBody,
-      response: { 200: verifyEmailResponse200 },
-    },
-    handler: verifyEmail,
-  });
-
-  app.get('/me', {
+  app.get(ROUTE_ME, {
     preHandler: [guard],
     schema: {
       response: { 200: meResponse200 },

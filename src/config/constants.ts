@@ -66,6 +66,10 @@ export const ROUTE_TENANT_INVITE = '/invite';
 export const ROUTE_TENANT_INVITATIONS = '/invitations';
 export const ROUTE_TENANT_MEMBERS = '/members';
 
+// ——— PostgreSQL error codes ———
+/** Unique constraint violation (e.g. duplicate membership). */
+export const PG_UNIQUE_VIOLATION = '23505';
+
 // ——— Error codes (API responses) ———
 export const ERROR_CODE_APP_ERROR = 'app_error';
 export const ERROR_CODE_INVALID_CREDENTIALS = 'invalid_credentials';

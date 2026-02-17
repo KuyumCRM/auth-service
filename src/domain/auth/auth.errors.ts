@@ -104,6 +104,15 @@ export class InvalidOnboardingTokenError extends AppError {
   }
 }
 
+/** Thrown when user is already a member of the tenant (duplicate membership). */
+export class MembershipAlreadyExistsError extends AppError {
+  constructor(message = 'Already a member of this tenant') {
+    super(message, 409);
+    this.name = 'MembershipAlreadyExistsError';
+    Object.setPrototypeOf(this, MembershipAlreadyExistsError.prototype);
+  }
+}
+
 /** Thrown when the requested user does not exist (e.g. GET /me with deleted user). */
 export class UserNotFoundError extends AppError {
   readonly code = 'not_found' as const;
