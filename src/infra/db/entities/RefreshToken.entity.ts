@@ -12,6 +12,9 @@ export class RefreshTokenEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId!: string;
 
+  @Column({ name: 'tenant_id', type: 'uuid' })
+  tenantId!: string;
+
   @Column({ name: 'token_hash', type: 'text', unique: true })
   tokenHash!: string;
 

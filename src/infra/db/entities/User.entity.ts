@@ -9,10 +9,7 @@ export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'tenant_id', type: 'uuid' })
-  tenantId!: string;
-
-  @Column({ type: 'text' })
+  @Column({ type: 'text', unique: true })
   email!: string;
 
   @Column({ name: 'password_hash', type: 'text', nullable: true })
@@ -26,6 +23,9 @@ export class UserEntity {
 
   @Column({ name: 'mfa_enabled', type: 'boolean', default: false })
   mfaEnabled!: boolean;
+
+  @Column({ name: 'default_tenant_id', type: 'uuid', nullable: true })
+  defaultTenantId!: string | null;
 
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   lastLoginAt!: Date | null;

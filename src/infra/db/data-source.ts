@@ -5,8 +5,11 @@ import { env } from '../../config/env.js';
 import { ApiKeyEntity } from './entities/ApiKey.entity.js';
 import { AuditLogEntity } from './entities/AuditLog.entity.js';
 import { InstagramConnectionEntity } from './entities/InstagramConnection.entity.js';
+import { InvitationEntity } from './entities/Invitation.entity.js';
+import { MembershipEntity } from './entities/Membership.entity.js';
 import { OneTimeTokenEntity } from './entities/OneTimeToken.entity.js';
 import { RefreshTokenEntity } from './entities/RefreshToken.entity.js';
+import { TenantEntity } from './entities/Tenant.entity.js';
 import { UserEntity } from './entities/User.entity.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,7 +21,10 @@ export const AppDataSource = new DataSource({
   synchronize: false,
   logging: false,
   entities: [
+    TenantEntity,
     UserEntity,
+    MembershipEntity,
+    InvitationEntity,
     RefreshTokenEntity,
     OneTimeTokenEntity,
     InstagramConnectionEntity,

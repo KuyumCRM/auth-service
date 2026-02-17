@@ -1,11 +1,17 @@
-// JWT and refresh token types per Section 5.1
+// JWT and refresh token types
+import type { TenantStatus, TenantPlan, MembershipRole } from '../tenant/tenant.types.js';
 
-export type SubscriptionTier = 'starter' | 'pro' | 'enterprise';
+/** Alias for JWT payload; same as TenantPlan. */
+export type SubscriptionTier = TenantPlan;
+
+export type { TenantStatus, MembershipRole };
 
 export interface JwtPayload {
   sub: string;
   tenant_id: string;
   email: string;
+  role: MembershipRole;
+  tenant_status: TenantStatus;
   subscription_tier: SubscriptionTier;
   feature_flags: string[];
   jti: string;
@@ -15,6 +21,7 @@ export interface JwtPayload {
 
 export interface RefreshTokenMeta {
   userId: string;
+  tenantId: string;
   familyId: string;
   deviceInfo: Record<string, unknown>;
   expiresAt: Date;
@@ -24,9 +31,10 @@ export interface RefreshTokenMeta {
 export interface RefreshToken {
   id: string;
   userId: string;
-  hash: string; // token_hash
+  tenantId: string;
+  hash: string;
   familyId: string;
-  deviceInfo: Record<string, unknown>; // JSONB: { ua, ip, device_name }
+  deviceInfo: Record<string, unknown>;
   expiresAt: Date;
   rotatedAt: Date | null;
   revokedAt: Date | null;
@@ -35,6 +43,7 @@ export interface RefreshToken {
 
 export interface CreateRefreshTokenDto {
   userId: string;
+  tenantId: string;
   familyId: string;
   deviceInfo: Record<string, unknown>;
   expiresAt: Date;
@@ -45,6 +54,8 @@ export interface IssueTokenOpts {
   userId: string;
   tenantId: string;
   email: string;
+  role: MembershipRole;
+  tenantStatus: TenantStatus;
   deviceInfo: Record<string, unknown>;
 }
 

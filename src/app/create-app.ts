@@ -97,7 +97,7 @@ export async function createApp(): Promise<FastifyInstance> {
 
   const resetPasswordBaseUrl = `${env.DASHBOARD_URL}/reset-password`;
   const onboardingSessionStore = createOnboardingSessionStore();
-  const authService = new AuthService(
+  const authService = new AuthService({
     userRepo,
     tenantRepo,
     membershipRepo,
@@ -111,8 +111,8 @@ export async function createApp(): Promise<FastifyInstance> {
     emailSender,
     resetPasswordBaseUrl,
     onboardingSessionStore,
-    instagramRepo
-  );
+    instagramRepo,
+  });
 
   const tenantService = new TenantService(
     tenantRepo,

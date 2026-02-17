@@ -12,6 +12,7 @@ function entityToRefreshToken(entity: RefreshTokenEntity): RefreshToken {
   return {
     id: entity.id,
     userId: entity.userId,
+    tenantId: entity.tenantId,
     hash: entity.tokenHash,
     familyId: entity.familyId,
     deviceInfo: entity.deviceInfo ?? {},
@@ -23,24 +24,25 @@ function entityToRefreshToken(entity: RefreshTokenEntity): RefreshToken {
 }
 
 export class TokenRepository implements ITokenRepository {
+  private readonly repo = AppDataSource.getRepository(RefreshTokenEntity);
+
   async findByHash(hash: string): Promise<RefreshToken | null> {
-    const repository = AppDataSource.getRepository(RefreshTokenEntity);
-    const entity = await repository.findOne({
+    const entity = await this.repo.findOne({
       where: { tokenHash: hash },
     });
     return entity ? entityToRefreshToken(entity) : null;
   }
 
   async create(data: CreateRefreshTokenDto): Promise<RefreshToken> {
-    const repository = AppDataSource.getRepository(RefreshTokenEntity);
-    const entity = repository.create({
+    const entity = this.repo.create({
       userId: data.userId,
+      tenantId: data.tenantId,
       tokenHash: data.hash,
       familyId: data.familyId,
       deviceInfo: data.deviceInfo,
       expiresAt: data.expiresAt,
     });
-    const saved = await repository.save(entity);
+    const saved = await this.repo.save(entity);
     return entityToRefreshToken(saved);
   }
 
@@ -56,6 +58,7 @@ export class TokenRepository implements ITokenRepository {
       await repository.update({ id: old.id }, { rotatedAt: new Date() });
       const newEntity = repository.create({
         userId: old.userId,
+        tenantId: old.tenantId,
         tokenHash: opts.newHash,
         familyId: old.familyId,
         deviceInfo: old.deviceInfo ?? {},
@@ -67,22 +70,10 @@ export class TokenRepository implements ITokenRepository {
   }
 
   async revokeFamilyById(familyId: string): Promise<void> {
-    const repository = AppDataSource.getRepository(RefreshTokenEntity);
-    await repository.update({ familyId }, { revokedAt: new Date() });
+    await this.repo.update({ familyId }, { revokedAt: new Date() });
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
-    const repository = AppDataSource.getRepository(RefreshTokenEntity);
-    await repository.update({ userId }, { revokedAt: new Date() });
-  }
-
-  async deleteExpired(): Promise<number> {
-    const repository = AppDataSource.getRepository(RefreshTokenEntity);
-    const result = await repository
-      .createQueryBuilder()
-      .delete()
-      .where('expires_at < :now', { now: new Date() })
-      .execute();
-    return result.affected ?? 0;
+    await this.repo.update({ userId }, { revokedAt: new Date() });
   }
 }

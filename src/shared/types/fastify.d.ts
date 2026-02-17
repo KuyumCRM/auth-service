@@ -10,8 +10,13 @@ declare module 'fastify' {
   interface FastifyInstance {
     authService?: import('../../domain/auth/auth.service.js').AuthService;
     tokenService?: import('../../domain/token/token.service.js').TokenService;
-    globalUserRepo?: import('../../shared/interfaces/IGlobalUserRepository.js').IGlobalUserRepository;
+    tenantService?: import('../../domain/tenant/tenant.service.js').TenantService;
+    invitationService?: import('../../domain/invitation/invitation.service.js').InvitationService;
+    userRepo?: import('../../shared/interfaces/IUserRepository.js').IUserRepository;
+    tenantRepo?: import('../../shared/interfaces/ITenantRepository.js').ITenantRepository;
+    membershipRepo?: import('../../shared/interfaces/IMembershipRepository.js').IMembershipRepository;
     instagramRepo?: import('../../shared/interfaces/IInstagramTokenRepository.js').IInstagramTokenRepository;
+    instagramOAuthService?: import('../../domain/instagram/instagram-oauth.service.js').InstagramOAuthService;
     authenticateGuard?: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

@@ -1,12 +1,17 @@
-// Port interface for tenant subscription data (tier + feature flags for JWT claims).
-import type { SubscriptionTier } from '../../domain/token/token.types.js';
+// Port interface for tenant CRUD + subscription data.
+import type { Tenant, CreateTenantDto, TenantStatus, TenantPlan } from '../../domain/tenant/tenant.types.js';
 
 export interface TenantSubscription {
   tenantId: string;
-  tier: SubscriptionTier;
+  tier: TenantPlan;
   featureFlags: string[];
 }
 
 export interface ITenantRepository {
+  findById(id: string): Promise<Tenant | null>;
+  findBySlug(slug: string): Promise<Tenant | null>;
+  create(data: CreateTenantDto): Promise<Tenant>;
+  update(id: string, data: Partial<Tenant>): Promise<Tenant>;
+  updateStatus(id: string, status: TenantStatus): Promise<Tenant>;
   getSubscription(tenantId: string): Promise<TenantSubscription>;
 }

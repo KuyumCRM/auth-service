@@ -1,6 +1,6 @@
 // bcrypt hash/verify, policy enforcement.
 import * as bcrypt from 'bcrypt';
-import type { ValidationResult } from '../auth/auth.types.js';
+import type { ValidationResult } from './password.types.js';
 
 const BCRYPT_COST = 12;
 const MIN_LENGTH = 12;

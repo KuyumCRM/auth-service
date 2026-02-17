@@ -69,3 +69,37 @@ export class InstagramOAuthError extends AppError {
     Object.setPrototypeOf(this, InstagramOAuthError.prototype);
   }
 }
+
+/** Thrown when user connects a PERSONAL Instagram account during onboarding. */
+export class InstagramPersonalAccountError extends AppError {
+  readonly code = 'instagram_personal_account' as const;
+  constructor(
+    message = 'Only Business or Creator Instagram accounts can create a workspace'
+  ) {
+    super(message, 403);
+    this.name = 'InstagramPersonalAccountError';
+    Object.setPrototypeOf(this, InstagramPersonalAccountError.prototype);
+  }
+}
+
+/** Thrown when ig_user_id already has a tenant (duplicate workspace). */
+export class InstagramAlreadyHasWorkspaceError extends AppError {
+  readonly code = 'instagram_already_has_workspace' as const;
+  constructor(
+    message = 'This Instagram account already has a workspace — ask your admin to invite you'
+  ) {
+    super(message, 409);
+    this.name = 'InstagramAlreadyHasWorkspaceError';
+    Object.setPrototypeOf(this, InstagramAlreadyHasWorkspaceError.prototype);
+  }
+}
+
+/** Thrown when onboarding token is missing, expired, or already consumed. */
+export class InvalidOnboardingTokenError extends AppError {
+  readonly code = 'invalid_onboarding_token' as const;
+  constructor(message = 'Invalid or expired onboarding session') {
+    super(message, 400);
+    this.name = 'InvalidOnboardingTokenError';
+    Object.setPrototypeOf(this, InvalidOnboardingTokenError.prototype);
+  }
+}

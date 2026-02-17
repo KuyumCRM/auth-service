@@ -11,5 +11,4 @@ export interface ITokenRepository {
   rotateToken(opts: RotateTokenOpts): Promise<RefreshToken>;
   revokeFamilyById(familyId: string): Promise<void>;
   revokeAllForUser(userId: string): Promise<void>;
-  deleteExpired(): Promise<number>;
 }
