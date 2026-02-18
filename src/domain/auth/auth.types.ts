@@ -134,3 +134,28 @@ export interface MeResult {
   memberships: MembershipInfo[];
   igConnections: MeIgConnection[];
 }
+
+/** Internal result of createWorkspaceForUser (tenant + membership + tokens). */
+export interface WorkspaceResult {
+  tenant: Tenant;
+  membership: Membership;
+  tokens: TokenPair;
+}
+
+/** Options for createWorkspace: either userId (Case 2, JWT) or email+password (Case 1). */
+export interface CreateWorkspaceOpts {
+  onboardingToken: string;
+  workspaceName?: string;
+  userId?: string;
+  email?: string;
+  password?: string;
+  mfaCode?: string;
+}
+
+/** Result of createWorkspace (same shape as SignupResult for the new workspace). */
+export interface CreateWorkspaceResult {
+  user: User;
+  tenant: Tenant;
+  membership: Membership;
+  tokens: TokenPair;
+}

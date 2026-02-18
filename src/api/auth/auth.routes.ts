@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
   ROUTE_SIGNUP,
+  ROUTE_CREATE_WORKSPACE,
   ROUTE_ACCEPT_INVITE,
   ROUTE_LOGIN,
   ROUTE_REFRESH,
@@ -14,6 +15,8 @@ import {
 import {
   signupBody,
   signupResponse201,
+  createWorkspaceBody,
+  createWorkspaceResponse201,
   acceptInviteBody,
   acceptInviteResponse201,
   loginBody,
@@ -31,6 +34,7 @@ import {
 } from './auth.schema.js';
 import {
   signup,
+  createWorkspace,
   acceptInvite,
   login,
   switchTenant,
@@ -52,6 +56,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       response: { 201: signupResponse201 },
     },
     handler: signup,
+  });
+
+  app.post(ROUTE_CREATE_WORKSPACE, {
+    preHandler: [app.optionalAuthenticateGuard!],
+    schema: {
+      body: createWorkspaceBody,
+      response: { 201: createWorkspaceResponse201 },
+    },
+    handler: createWorkspace,
   });
 
   app.post(ROUTE_ACCEPT_INVITE, {

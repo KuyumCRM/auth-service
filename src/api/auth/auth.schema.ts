@@ -67,6 +67,32 @@ export const signupResponse201 = {
   additionalProperties: false,
 } as const;
 
+// POST /create-workspace (optional auth: JWT or body credentials)
+export const createWorkspaceBody = {
+  type: 'object',
+  required: ['onboardingToken'],
+  properties: {
+    onboardingToken: { type: 'string', minLength: 1 },
+    workspaceName: { type: 'string', minLength: 1, maxLength: 100 },
+    email: { type: 'string', format: 'email' },
+    password: { type: 'string', minLength: 1 },
+    mfaCode: { type: 'string', minLength: 6, maxLength: 6 },
+  },
+  additionalProperties: false,
+} as const;
+
+export const createWorkspaceResponse201 = {
+  type: 'object',
+  required: ['accessToken', 'refreshToken', 'user', 'tenant'],
+  properties: {
+    accessToken: { type: 'string' },
+    refreshToken: { type: 'string' },
+    user: userSafe,
+    tenant: tenantSafe,
+  },
+  additionalProperties: false,
+} as const;
+
 // POST /accept-invite
 export const acceptInviteBody = {
   type: 'object',

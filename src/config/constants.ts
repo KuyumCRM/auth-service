@@ -49,6 +49,7 @@ export const PASSWORD_MIN_LENGTH = 12;
 
 // ——— Auth API route paths (relative to API_V1_AUTH_PREFIX) ———
 export const ROUTE_SIGNUP = '/signup';
+export const ROUTE_CREATE_WORKSPACE = '/create-workspace';
 export const ROUTE_ACCEPT_INVITE = '/accept-invite';
 export const ROUTE_LOGIN = '/login';
 export const ROUTE_REFRESH = '/refresh';

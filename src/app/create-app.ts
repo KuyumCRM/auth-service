@@ -67,6 +67,11 @@ export async function createApp(): Promise<FastifyInstance> {
     tokenBlacklist,
     publicKeyPem,
   });
+  const optionalAuthenticateGuard = createAuthenticateGuard({
+    tokenBlacklist,
+    publicKeyPem,
+    optional: true,
+  });
 
   const auditRepo = new AuditRepository();
   const tokenRepo = new TokenRepository();
@@ -155,6 +160,7 @@ export async function createApp(): Promise<FastifyInstance> {
   app.decorate('instagramRepo', instagramRepo);
   app.decorate('instagramOAuthService', instagramOAuthService);
   app.decorate('authenticateGuard', authenticateGuard);
+  app.decorate('optionalAuthenticateGuard', optionalAuthenticateGuard);
   app.decorate('tokenBlacklist', tokenBlacklist);
 
   await app.register(registerRoutes);

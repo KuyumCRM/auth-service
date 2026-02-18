@@ -18,6 +18,8 @@ import type { JwtPayload } from '../../domain/token/token.types.js';
 export interface AuthenticateGuardDeps {
   tokenBlacklist: ITokenBlacklist;
   publicKeyPem: string;
+  /** When true, missing or invalid JWT does not reply with 401 — request.user stays undefined. */
+  optional?: boolean;
 }
 
 let cachedPublicKey: CryptoKey | null = null;
@@ -29,8 +31,12 @@ async function getPublicKey(publicKeyPem: string): Promise<CryptoKey> {
   return cachedPublicKey;
 }
 
+/**
+ * Creates an auth guard. With deps.optional: true, missing or invalid JWT does not reply —
+ * request.user stays undefined so the handler can treat as unauthenticated.
+ */
 export function createAuthenticateGuard(deps: AuthenticateGuardDeps) {
-  const { tokenBlacklist, publicKeyPem } = deps;
+  const { tokenBlacklist, publicKeyPem, optional = false } = deps;
 
   return async function authenticateGuard(
     request: FastifyRequest,
@@ -38,18 +44,14 @@ export function createAuthenticateGuard(deps: AuthenticateGuardDeps) {
   ): Promise<void> {
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith(BEARER_PREFIX)) {
-      return reply.status(401).send({
-        error: ERROR_MSG_MISSING_AUTH_HEADER,
-        code: ERROR_CODE_INVALID,
-      });
+      if (optional) return;
+      return reply.status(401).send({ error: ERROR_MSG_MISSING_AUTH_HEADER, code: ERROR_CODE_INVALID });
     }
 
     const token = authHeader.slice(BEARER_PREFIX.length).trim();
     if (!token) {
-      return reply.status(401).send({
-        error: ERROR_MSG_INVALID_TOKEN,
-        code: ERROR_CODE_INVALID,
-      });
+      if (optional) return;
+      return reply.status(401).send({ error: ERROR_MSG_INVALID_TOKEN, code: ERROR_CODE_INVALID });
     }
 
     try {
@@ -60,34 +62,25 @@ export function createAuthenticateGuard(deps: AuthenticateGuardDeps) {
 
       const jti = payload.jti as string | undefined;
       if (!jti) {
-        return reply.status(401).send({
-          error: ERROR_MSG_INVALID_TOKEN,
-          code: ERROR_CODE_INVALID,
-        });
+        if (optional) return;
+        return reply.status(401).send({ error: ERROR_MSG_INVALID_TOKEN, code: ERROR_CODE_INVALID });
       }
 
       const blacklisted = await tokenBlacklist.has(jti);
       if (blacklisted) {
-        return reply.status(401).send({
-          error: ERROR_MSG_TOKEN_REVOKED,
-          code: ERROR_CODE_BLACKLISTED,
-        });
+        if (optional) return;
+        return reply.status(401).send({ error: ERROR_MSG_TOKEN_REVOKED, code: ERROR_CODE_BLACKLISTED });
       }
 
       request.user = payload as unknown as JwtPayload;
       request.tenantId = (payload.tenant_id as string) ?? undefined;
     } catch (err: unknown) {
+      if (optional) return;
       const message = err instanceof Error ? err.message : '';
       if (message.includes('expired') || message.includes('JWT Expired')) {
-        return reply.status(401).send({
-          error: ERROR_MSG_TOKEN_EXPIRED,
-          code: ERROR_CODE_EXPIRED,
-        });
+        return reply.status(401).send({ error: ERROR_MSG_TOKEN_EXPIRED, code: ERROR_CODE_EXPIRED });
       }
-      return reply.status(401).send({
-        error: ERROR_MSG_INVALID_TOKEN,
-        code: ERROR_CODE_INVALID,
-      });
+      return reply.status(401).send({ error: ERROR_MSG_INVALID_TOKEN, code: ERROR_CODE_INVALID });
     }
   };
 }

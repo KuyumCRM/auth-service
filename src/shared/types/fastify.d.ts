@@ -19,5 +19,6 @@ declare module 'fastify' {
     instagramOAuthService?: import('../../domain/instagram/instagram-oauth.service.js').InstagramOAuthService;
     tokenBlacklist?: import('../../shared/interfaces/ITokenBlacklist.js').ITokenBlacklist;
     authenticateGuard?: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    optionalAuthenticateGuard?: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

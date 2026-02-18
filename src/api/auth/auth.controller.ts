@@ -91,6 +91,42 @@ export async function signup(
   }
 }
 
+// POST /create-workspace (optional auth: with JWT = Case 2, without = Case 1 with email+password in body)
+export async function createWorkspace(
+  request: FastifyRequest<{
+    Body: {
+      onboardingToken: string;
+      workspaceName?: string;
+      email?: string;
+      password?: string;
+      mfaCode?: string;
+    };
+  }>,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const jwtPayload = request.user as JwtPayload | undefined;
+    const authService = request.server.authService!;
+    const result = await authService.createWorkspace({
+      onboardingToken: request.body.onboardingToken,
+      workspaceName: request.body.workspaceName,
+      userId: jwtPayload?.sub,
+      email: request.body.email,
+      password: request.body.password,
+      mfaCode: request.body.mfaCode,
+    });
+    reply.setCookie(REFRESH_COOKIE_NAME, result.tokens.refreshToken, refreshCookieOptions());
+    reply.status(201).send({
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+      user: toUserSafe(result.user),
+      tenant: result.tenant,
+    });
+  } catch (err) {
+    handleError(reply, err);
+  }
+}
+
 // POST /accept-invite
 export async function acceptInvite(
   request: FastifyRequest<{ Body: { inviteToken: string; password?: string } }>,

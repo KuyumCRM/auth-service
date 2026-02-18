@@ -15,6 +15,7 @@ import type { PasswordService } from '../password/password.service.js';
 import type { TokenService } from '../token/token.service.js';
 import type { TotpService } from '../mfa/totp.service.js';
 import type {
+  User,
   SignupWithOnboardingDto,
   SignupResult,
   LoginCredentials,
@@ -23,12 +24,14 @@ import type {
   AcceptInviteResult,
   MembershipInfo,
   TokenPair,
-  CreateMembershipDto,
-  CreateUserDto,
   CreateTenantDto,
   MeResult,
   TenantStatus,
+  CreateWorkspaceOpts,
+  CreateWorkspaceResult,
+  WorkspaceResult,
 } from './auth.types.js';
+import type { OnboardingSessionPayload } from '../instagram/onboarding.types.js';
 import { PASSWORD_RESET_EXPIRY_HOURS } from '../../config/constants.js';
 import {
   AppError,
@@ -37,7 +40,6 @@ import {
   InvalidOnboardingTokenError,
   UserNotFoundError,
 } from './auth.errors.js';
-import { IssueTokenOpts } from '../token/token.types.js';
 
 export interface AuthServiceDeps {
   userRepo: IUserRepository;
@@ -72,7 +74,103 @@ export class AuthService {
   constructor(private readonly deps: AuthServiceDeps) {}
 
   /**
-   * Owner signup gated by Instagram onboarding: consume one-time session, create tenant + user + owner membership + IG connection.
+   * Pure credential verification. Used by login() and createWorkspace() (Case 1).
+   */
+  private async authenticateUser(
+    email: string,
+    password: string,
+    mfaCode?: string
+  ): Promise<User> {
+    const user = await this.deps.userRepo.findByEmail(email);
+    if (!user || !user.passwordHash) {
+      throw new InvalidCredentialsError();
+    }
+    if (!user.isActive) {
+      throw new AccountLockedError();
+    }
+    const valid = await this.deps.passwordService.verify(password, user.passwordHash);
+    if (!valid) {
+      throw new InvalidCredentialsError('Invalid password');
+    }
+    if (user.mfaEnabled) {
+      if (!mfaCode) {
+        throw new AppError('MFA code required', 400);
+      }
+      if (!user.mfaSecret) {
+        throw new AppError('MFA not configured', 400);
+      }
+      const mfaValid = this.deps.totpService.verify(mfaCode, user.mfaSecret);
+      if (!mfaValid) {
+        throw new InvalidCredentialsError('Invalid MFA code');
+      }
+    }
+    return user;
+  }
+
+  /**
+   * Create tenant + membership + IG connection + issue tokens + events. Shared by signupWithOnboarding and createWorkspace.
+   */
+  private async createWorkspaceForUser(
+    userId: string,
+    email: string,
+    payload: OnboardingSessionPayload,
+    workspaceName?: string
+  ): Promise<WorkspaceResult> {
+    const name = (workspaceName ?? payload.igUsername).trim() || payload.igUsername;
+    let slug = slugify(name);
+    const existingTenant = await this.deps.tenantRepo.findBySlug(slug);
+    if (existingTenant) {
+      slug = `${slug}-${crypto.randomBytes(3).toString('hex')}`;
+    }
+    const createTenantOpts: CreateTenantDto = {
+      name,
+      slug,
+      status: 'pending_verification',
+      plan: 'starter',
+    };
+    const tenant = await this.deps.tenantRepo.create(createTenantOpts);
+    const membership = await this.deps.membershipRepo.create({
+      userId,
+      tenantId: tenant.id,
+      role: 'owner',
+    });
+    const createIgConnectionDto: CreateIgConnectionDto = {
+      userId,
+      tenantId: tenant.id,
+      igUserId: payload.igUserId,
+      igUsername: payload.igUsername,
+      igAccountType: payload.accountType,
+      accessTokenEnc: payload.accessTokenEnc,
+      tokenIv: payload.tokenIv,
+      tokenExpiresAt: new Date(payload.tokenExpiresAt),
+      scopes: payload.scopes,
+      isActive: true,
+    };
+    await this.deps.instagramRepo.create(createIgConnectionDto);
+    await this.deps.userRepo.update(userId, { defaultTenantId: tenant.id });
+    const tokens = await this.deps.tokenService.issueTokens({
+      userId,
+      tenantId: tenant.id,
+      email,
+      role: 'owner',
+      tenantStatus: 'pending_verification',
+      deviceInfo: {},
+    });
+    await this.deps.eventPublisher.publish('auth.tenant.created', {
+      tenantId: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+    });
+    await this.deps.auditRepo.create({
+      eventType: 'tenant.created',
+      userId,
+      tenantId: tenant.id,
+    });
+    return { tenant, membership, tokens };
+  }
+
+  /**
+   * Owner signup gated by Instagram onboarding: consume one-time session, create user + workspace (tenant + membership + IG connection).
    */
   async signupWithOnboarding(dto: SignupWithOnboardingDto): Promise<SignupResult> {
     const payload = await this.deps.onboardingSessionStore.consume(dto.onboardingToken);
@@ -90,88 +188,28 @@ export class AuthService {
       throw new AppError('Email already in use', 409);
     }
 
-    const workspaceName = (dto.workspaceName ?? payload.igUsername).trim() || payload.igUsername;
-    let slug = slugify(workspaceName);
-    const existingTenant = await this.deps.tenantRepo.findBySlug(slug);
-    if (existingTenant) {
-      slug = `${slug}-${crypto.randomBytes(3).toString('hex')}`;
-    }
-    // Create tenant
-    const createTenantOpts: CreateTenantDto = {
-      name: workspaceName,
-      slug,
-      status: 'pending_verification',
-      plan: 'starter',
-    };
-    const tenant = await this.deps.tenantRepo.create(createTenantOpts);
-
-    // Create user
     const passwordHash = await this.deps.passwordService.hash(dto.password);
-    const createUserOpts: CreateUserDto = {
+    const user = await this.deps.userRepo.create({
       email: dto.email,
       passwordHash,
-      defaultTenantId: tenant.id,
-    };
-    const user = await this.deps.userRepo.create(createUserOpts);
-
-    // Create membership
-    const membershipOpts: CreateMembershipDto = {
-      userId: user.id,
-      tenantId: tenant.id,
-      role: 'owner',
-    };
-    const membership = await this.deps.membershipRepo.create(membershipOpts);
-
-    // Create Instagram connection
-    const createIgConnectionDto: CreateIgConnectionDto = {
-      userId: user.id,
-      tenantId: tenant.id,
-      igUserId: payload.igUserId,
-      igUsername: payload.igUsername,
-      igAccountType: payload.accountType,
-      accessTokenEnc: payload.accessTokenEnc,
-      tokenIv: payload.tokenIv,
-      tokenExpiresAt: new Date(payload.tokenExpiresAt),
-      scopes: payload.scopes,
-      isActive: true,
-    };
-    await this.deps.instagramRepo.create(createIgConnectionDto);
-
-    // Issue tokens
-    const tokenOpts: IssueTokenOpts = {
-      userId: user.id,
-      tenantId: tenant.id,
-      email: user.email,
-      role: 'owner',
-      tenantStatus: 'pending_verification',
-      deviceInfo: {},
-    };
-    const tokens = await this.deps.tokenService.issueTokens(tokenOpts);
-
-    // Publish events
-    await this.deps.eventPublisher.publish('auth.tenant.created', {
-      tenantId: tenant.id,
-      name: tenant.name,
-      slug: tenant.slug,
+      defaultTenantId: null,
     });
+
     await this.deps.eventPublisher.publish('auth.user.registered', {
       userId: user.id,
-      tenantId: tenant.id,
-    });
-
-    // Create audit entries
-    await this.deps.auditRepo.create({
-      eventType: 'tenant.created',
-      userId: user.id,
-      tenantId: tenant.id,
     });
     await this.deps.auditRepo.create({
       eventType: 'user.registered',
       userId: user.id,
-      tenantId: tenant.id,
     });
 
-    return { user, tenant, membership, tokens };
+    const workspace = await this.createWorkspaceForUser(
+      user.id,
+      user.email,
+      payload,
+      dto.workspaceName
+    );
+    return { user, ...workspace };
   }
 
   /**
@@ -259,35 +297,7 @@ export class AuthService {
    * Login: multi-tenant aware — returns all memberships.
    */
   async login(dto: LoginCredentials): Promise<LoginResult> {
-    const user = await this.deps.userRepo.findByEmail(dto.email);
-    if (!user || !user.passwordHash) {
-      throw new InvalidCredentialsError();
-    }
-
-    if (!user.isActive) {
-      throw new AccountLockedError();
-    }
-
-    const passwordValid = await this.deps.passwordService.verify(
-      dto.password,
-      user.passwordHash
-    );
-    if (!passwordValid) {
-      throw new InvalidCredentialsError("Invalid password");
-    }
-
-    if (user.mfaEnabled) {
-      if (!dto.mfaCode) {
-        throw new AppError('MFA code required', 400);
-      }
-      if (!user.mfaSecret) {
-        throw new AppError('MFA not configured', 400);
-      }
-      const mfaValid = this.deps.totpService.verify(dto.mfaCode, user.mfaSecret);
-      if (!mfaValid) {
-        throw new InvalidCredentialsError('Invalid MFA code');
-      }
-    }
+    const user = await this.authenticateUser(dto.email, dto.password, dto.mfaCode);
 
     // Load all active memberships
     const memberships = await this.deps.membershipRepo.findAllByUserId(user.id);
@@ -353,6 +363,39 @@ export class AuthService {
       currentRole: currentMembership.role,
       tenants,
     };
+  }
+
+  /**
+   * Create a new workspace for an existing user. Case 1: authenticate with email+password (no JWT).
+   * Case 2: user already authenticated via JWT (userId provided). Onboarding token is consumed after auth succeeds.
+   */
+  async createWorkspace(opts: CreateWorkspaceOpts): Promise<CreateWorkspaceResult> {
+    let user: User;
+    if (opts.userId) {
+      const found = await this.deps.userRepo.findById(opts.userId);
+      if (!found) {
+        throw new UserNotFoundError();
+      }
+      user = found;
+    } else {
+      if (!opts.email || !opts.password) {
+        throw new AppError('Email and password are required', 400);
+      }
+      user = await this.authenticateUser(opts.email, opts.password, opts.mfaCode);
+    }
+
+    const payload = await this.deps.onboardingSessionStore.consume(opts.onboardingToken);
+    if (!payload) {
+      throw new InvalidOnboardingTokenError();
+    }
+
+    const workspace = await this.createWorkspaceForUser(
+      user.id,
+      user.email,
+      payload,
+      opts.workspaceName
+    );
+    return { user, ...workspace };
   }
 
   /**
