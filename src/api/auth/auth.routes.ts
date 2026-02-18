@@ -5,8 +5,6 @@ import {
   ROUTE_ACCEPT_INVITE,
   ROUTE_LOGIN,
   ROUTE_REFRESH,
-  ROUTE_FORGOT_PASSWORD,
-  ROUTE_RESET_PASSWORD,
   ROUTE_VERIFY_EMAIL,
   ROUTE_SWITCH_TENANT,
   ROUTE_LOGOUT,
@@ -25,9 +23,6 @@ import {
   switchTenantResponse200,
   refreshResponse200,
   logoutBody,
-  forgotPasswordBody,
-  resetPasswordBody,
-  resetPasswordResponse200,
   verifyEmailBody,
   verifyEmailResponse200,
   meResponse200,
@@ -40,8 +35,6 @@ import {
   switchTenant,
   refresh,
   logout,
-  forgotPassword,
-  resetPassword,
   verifyEmail,
   me,
 } from './auth.controller.js';
@@ -88,22 +81,6 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       response: { 200: refreshResponse200 },
     },
     handler: refresh,
-  });
-
-  app.post(ROUTE_FORGOT_PASSWORD, {
-    schema: {
-      body: forgotPasswordBody,
-      response: { 202: { type: 'null', description: 'Accepted' } },
-    },
-    handler: forgotPassword,
-  });
-
-  app.post(ROUTE_RESET_PASSWORD, {
-    schema: {
-      body: resetPasswordBody,
-      response: { 200: resetPasswordResponse200 },
-    },
-    handler: resetPassword,
   });
 
   app.post(ROUTE_VERIFY_EMAIL, {

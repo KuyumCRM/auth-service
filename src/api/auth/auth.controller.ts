@@ -5,7 +5,6 @@ import {
   REFRESH_COOKIE_NAME,
   ERROR_CODE_INVALID,
   ERROR_MSG_REFRESH_TOKEN_REQUIRED,
-  MESSAGE_PASSWORD_UPDATED,
   MESSAGE_EMAIL_VERIFIED,
 } from '../../config/constants.js';
 import type { JwtPayload } from '../../domain/token/token.types.js';
@@ -150,26 +149,6 @@ export async function logout(
   await authService.logout(userId, rt ?? '', all);
   reply.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
   reply.status(204).send();
-}
-
-// POST /forgot-password
-export async function forgotPassword(
-  request: FastifyRequest<{ Body: { email: string } }>,
-  reply: FastifyReply
-): Promise<void> {
-  const authService = request.server.authService!;
-  await authService.forgotPassword(request.body.email);
-  reply.status(202).send();
-}
-
-// POST /reset-password
-export async function resetPassword(
-  request: FastifyRequest<{ Body: { token: string; newPassword: string } }>,
-  reply: FastifyReply
-): Promise<void> {
-  const authService = request.server.authService!;
-  await authService.resetPassword(request.body.token, request.body.newPassword);
-  reply.status(200).send({ message: MESSAGE_PASSWORD_UPDATED });
 }
 
 // POST /verify-email

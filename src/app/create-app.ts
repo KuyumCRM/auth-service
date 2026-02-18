@@ -19,7 +19,9 @@ import { AuditRepository } from '../infra/db/repositories/audit.repository.js';
 import { TokenRepository } from '../infra/db/repositories/token.repository.js';
 import { InstagramTokenRepository } from '../infra/db/repositories/instagram-token.repository.js';
 import { OneTimeTokenRepository } from '../infra/db/repositories/one-time-token.repository.js';
+import { OneTimeTokenService } from '../domain/one-time-token/one-time-token.service.js';
 import { PasswordService } from '../domain/password/password.service.js';
+import { PasswordResetService } from '../domain/password/password-reset.service.js';
 import { TotpService } from '../domain/mfa/totp.service.js';
 import { TokenService } from '../domain/token/token.service.js';
 import { AuthService } from '../domain/auth/auth.service.js';
@@ -84,6 +86,7 @@ export async function createApp(): Promise<FastifyInstance> {
   const invitationRepo = createInvitationRepository();
   const instagramRepo = new InstagramTokenRepository();
   const oneTimeTokenRepo = new OneTimeTokenRepository();
+  const oneTimeTokenService = new OneTimeTokenService({ oneTimeTokenRepo });
 
   const eventPublisher = createStubEventPublisher();
   const emailSender = createStubEmailSender();
@@ -116,11 +119,19 @@ export async function createApp(): Promise<FastifyInstance> {
     passwordService,
     tokenService,
     totpService,
-    oneTimeTokenRepo,
-    emailSender,
-    resetPasswordBaseUrl,
+    oneTimeTokenService,
     onboardingSessionStore,
     instagramRepo,
+  });
+
+  const passwordResetService = new PasswordResetService({
+    userRepo,
+    oneTimeTokenService,
+    emailSender,
+    passwordService,
+    tokenService,
+    auditRepo,
+    resetPasswordBaseUrl,
   });
 
   const tenantService = new TenantService({
@@ -154,6 +165,7 @@ export async function createApp(): Promise<FastifyInstance> {
   });
 
   app.decorate('authService', authService);
+  app.decorate('passwordResetService', passwordResetService);
   app.decorate('tokenService', tokenService);
   app.decorate('tenantService', tenantService);
   app.decorate('invitationService', invitationService);

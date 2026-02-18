@@ -9,6 +9,7 @@ declare module 'fastify' {
 
   interface FastifyInstance {
     authService?: import('../../domain/auth/auth.service.js').AuthService;
+    passwordResetService?: import('../../domain/password/password-reset.service.js').PasswordResetService;
     tokenService?: import('../../domain/token/token.service.js').TokenService;
     tenantService?: import('../../domain/tenant/tenant.service.js').TenantService;
     invitationService?: import('../../domain/invitation/invitation.service.js').InvitationService;

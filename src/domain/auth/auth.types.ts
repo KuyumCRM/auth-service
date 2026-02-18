@@ -7,8 +7,7 @@ import type { IMembershipRepository } from '../../shared/interfaces/IMembershipR
 import type { IInvitationRepository } from '../../shared/interfaces/IInvitationRepository.js';
 import type { IAuditRepository } from '../../shared/interfaces/IAuditRepository.js';
 import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
-import type { IOneTimeTokenRepository } from '../../shared/interfaces/IOneTimeTokenRepository.js';
-import type { IEmailSender } from '../../shared/interfaces/IEmailSender.js';
+import type { OneTimeTokenService } from '../one-time-token/one-time-token.service.js';
 import type { IOnboardingSessionStore } from '../../shared/interfaces/IOnboardingSessionStore.js';
 import type { IInstagramTokenRepository } from '../../shared/interfaces/IInstagramTokenRepository.js';
 import type { PasswordService } from '../password/password.service.js';
@@ -25,9 +24,7 @@ export interface AuthServiceDeps {
   passwordService: PasswordService;
   tokenService: TokenService;
   totpService: TotpService;
-  oneTimeTokenRepo: IOneTimeTokenRepository;
-  emailSender: IEmailSender;
-  resetPasswordBaseUrl: string;
+  oneTimeTokenService: OneTimeTokenService;
   onboardingSessionStore: IOnboardingSessionStore;
   instagramRepo: IInstagramTokenRepository;
 }

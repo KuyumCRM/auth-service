@@ -17,8 +17,7 @@ import type {
   WorkspaceResult,
 } from './auth.types.js';
 import type { OnboardingSessionPayload } from '../instagram/onboarding.types.js';
-import { sha256, generateSecureToken, slugify, toMembershipInfo, toMeIgConnection } from '../../shared/utils/index.js';
-import { PASSWORD_RESET_EXPIRY_HOURS } from '../../config/constants.js';
+import { generateSecureToken, sha256, slugify, toMembershipInfo, toMeIgConnection } from '../../shared/utils/index.js';
 import {
   AppError,
   InvalidCredentialsError,
@@ -409,66 +408,15 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(email: string): Promise<void> {
-    const user = await this.deps.userRepo.findByEmail(email);
-    if (!user) {
-      return;
-    }
-    const rawToken = generateSecureToken();
-    const tokenHash = sha256(rawToken);
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + PASSWORD_RESET_EXPIRY_HOURS);
-    await this.deps.oneTimeTokenRepo.create({
-      userId: user.id,
-      tokenHash,
-      type: 'password_reset',
-      expiresAt,
-    });
-    const resetLink = `${this.deps.resetPasswordBaseUrl}?token=${encodeURIComponent(rawToken)}`;
-    await this.deps.emailSender.sendResetPasswordEmail(user.email, resetLink);
-    await this.deps.auditRepo.create({
-      eventType: 'password_reset_requested',
-      userId: user.id,
-    });
-  }
-
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    const tokenHash = sha256(token);
-    const ott = await this.deps.oneTimeTokenRepo.findByTokenHashAndType(
-      tokenHash,
-      'password_reset'
-    );
-    if (!ott || ott.usedAt || ott.expiresAt < new Date()) {
-      throw new AppError('Invalid or expired reset token', 400);
-    }
-    const policyResult = this.deps.passwordService.validatePolicy(newPassword);
-    if (!policyResult.valid) {
-      throw new AppError(policyResult.errors.join('; '), 400);
-    }
-    const passwordHash = await this.deps.passwordService.hash(newPassword);
-    await this.deps.userRepo.update(ott.userId, { passwordHash });
-    await this.deps.tokenService.revokeAllForUser(ott.userId);
-    await this.deps.oneTimeTokenRepo.markUsed(ott.id);
-    await this.deps.auditRepo.create({
-      eventType: 'password_reset_completed',
-      userId: ott.userId,
-    });
-  }
-
   async verifyEmail(token: string): Promise<void> {
-    const tokenHash = sha256(token);
-    const ott = await this.deps.oneTimeTokenRepo.findByTokenHashAndType(
-      tokenHash,
+    const { userId } = await this.deps.oneTimeTokenService.validateAndConsume(
+      token,
       'email_verify'
     );
-    if (!ott || ott.usedAt || ott.expiresAt < new Date()) {
-      throw new AppError('Invalid or expired verification token', 400);
-    }
-    await this.deps.userRepo.update(ott.userId, { emailVerified: true });
-    await this.deps.oneTimeTokenRepo.markUsed(ott.id);
+    await this.deps.userRepo.update(userId, { emailVerified: true });
     await this.deps.auditRepo.create({
       eventType: 'email_verified',
-      userId: ott.userId,
+      userId,
     });
   }
 

@@ -26,6 +26,7 @@ export const JTI_KEY_PREFIX = 'jti:';
 
 // ——— API route prefixes ———
 export const API_V1_AUTH_PREFIX = '/api/v1/auth';
+export const API_V1_PASSWORD_PREFIX = '/api/v1/password';
 export const API_V1_TENANT_PREFIX = '/api/v1/tenant';
 export const API_V1_AUTH_INSTAGRAM_PREFIX = '/api/v1/auth/instagram';
 
@@ -53,12 +54,14 @@ export const ROUTE_CREATE_WORKSPACE = '/create-workspace';
 export const ROUTE_ACCEPT_INVITE = '/accept-invite';
 export const ROUTE_LOGIN = '/login';
 export const ROUTE_REFRESH = '/refresh';
-export const ROUTE_FORGOT_PASSWORD = '/forgot-password';
-export const ROUTE_RESET_PASSWORD = '/reset-password';
 export const ROUTE_VERIFY_EMAIL = '/verify-email';
 export const ROUTE_SWITCH_TENANT = '/switch-tenant';
 export const ROUTE_LOGOUT = '/logout';
 export const ROUTE_ME = '/me';
+
+// ——— Password API route paths (relative to API_V1_PASSWORD_PREFIX) ———
+export const ROUTE_FORGOT_PASSWORD = '/forgot-password';
+export const ROUTE_RESET_PASSWORD = '/reset-password';
 
 // ——— Tenant API route paths (relative to API_V1_TENANT_PREFIX) ———
 export const ROUTE_TENANT_INVITE = '/invite';
