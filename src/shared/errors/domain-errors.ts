@@ -1,4 +1,5 @@
-// Domain error classes — base AppError + auth/token/Instagram errors
+// Domain error classes — base AppError + auth/token/Instagram/invitation errors
+// Centralized in shared/errors because used across multiple domains.
 
 export class AppError extends Error {
   readonly statusCode: number;
@@ -12,6 +13,7 @@ export class AppError extends Error {
   }
 }
 
+// ——— Auth / credentials ———
 export class InvalidCredentialsError extends AppError {
   constructor(message = 'Invalid email or password') {
     super(message, 401);
@@ -36,6 +38,7 @@ export class EmailNotVerifiedError extends AppError {
   }
 }
 
+// ——— Token ———
 export class TokenExpiredError extends AppError {
   constructor(message = 'Token has expired') {
     super(message, 401);
@@ -62,6 +65,7 @@ export class TokenReuseDetectedError extends AppError {
   }
 }
 
+// ——— Instagram OAuth ———
 export class InstagramOAuthError extends AppError {
   constructor(message = 'Instagram OAuth failed') {
     super(message, 502);
@@ -104,6 +108,7 @@ export class InvalidOnboardingTokenError extends AppError {
   }
 }
 
+// ——— Membership / invitation ———
 /** Thrown when user is already a member of the tenant (duplicate membership). */
 export class MembershipAlreadyExistsError extends AppError {
   constructor(message = 'Already a member of this tenant') {

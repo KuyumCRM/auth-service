@@ -1,15 +1,36 @@
-// Domain types: User, Membership, TokenPair, AuthResult (Tenant/Invitation types from their domains)
-import type {
-  Tenant,
-  TenantStatus,
-  TenantPlan,
-  MembershipRole,
-  CreateTenantDto,
-} from '../tenant/tenant.types.js';
-import type { Invitation, CreateInvitationDto } from '../invitation/invitation.types.js';
+// Domain types: User, Membership, AuthResult (Tenant/Invitation from their domains)
+import type { Tenant, TenantStatus, MembershipRole } from '../tenant/tenant.types.js';
+import type { TokenPair } from '../token/token.types.js';
+import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
+import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
+import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
+import type { IInvitationRepository } from '../../shared/interfaces/IInvitationRepository.js';
+import type { IAuditRepository } from '../../shared/interfaces/IAuditRepository.js';
+import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
+import type { IOneTimeTokenRepository } from '../../shared/interfaces/IOneTimeTokenRepository.js';
+import type { IEmailSender } from '../../shared/interfaces/IEmailSender.js';
+import type { IOnboardingSessionStore } from '../../shared/interfaces/IOnboardingSessionStore.js';
+import type { IInstagramTokenRepository } from '../../shared/interfaces/IInstagramTokenRepository.js';
+import type { PasswordService } from '../password/password.service.js';
+import type { TokenService } from '../token/token.service.js';
+import type { TotpService } from '../mfa/totp.service.js';
 
-export type { Tenant, TenantStatus, TenantPlan, MembershipRole, CreateTenantDto };
-export type { Invitation, CreateInvitationDto };
+export interface AuthServiceDeps {
+  userRepo: IUserRepository;
+  tenantRepo: ITenantRepository;
+  membershipRepo: IMembershipRepository;
+  invitationRepo: IInvitationRepository;
+  auditRepo: IAuditRepository;
+  eventPublisher: IEventPublisher;
+  passwordService: PasswordService;
+  tokenService: TokenService;
+  totpService: TotpService;
+  oneTimeTokenRepo: IOneTimeTokenRepository;
+  emailSender: IEmailSender;
+  resetPasswordBaseUrl: string;
+  onboardingSessionStore: IOnboardingSessionStore;
+  instagramRepo: IInstagramTokenRepository;
+}
 
 export interface User {
   id: string;
@@ -37,9 +58,11 @@ export interface Membership {
   updatedAt: Date;
 }
 
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
+/** Membership with tenant details — returned by membershipRepo.findAllByUserId. */
+export interface MembershipWithTenant extends Membership {
+  tenantName: string;
+  tenantSlug: string;
+  tenantStatus: string;
 }
 
 export interface MembershipInfo {

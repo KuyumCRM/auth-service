@@ -1,50 +1,30 @@
 // JWT creation, validation, refresh token rotation with reuse detection.
 import * as crypto from 'crypto';
+import { sha256, addDays } from '../../shared/utils/index.js';
 import {
   SignJWT,
   importPKCS8,
   type CryptoKey,
 } from 'jose';
-import type { ITokenRepository } from '../../shared/interfaces/ITokenRepository.js';
-import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
-import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
-import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
-import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
-import type { TokenPair } from '../auth/auth.types.js';
+import type { TokenPair } from './token.types.js';
 import type {
   IssueTokenOpts,
   CreateRefreshTokenDto,
   RotateTokenOpts,
 } from './token.types.js';
+import type { TenantPlan, TenantStatus, MembershipRole } from '../tenant/tenant.types.js';
 import { JWT_ALGORITHM_RS256 } from '../../config/constants.js';
 import {
   InvalidTokenError,
   TokenExpiredError,
   TokenReuseDetectedError,
-} from '../auth/auth.errors.js';
+} from '../../shared/errors/domain-errors.js';
+import type { TokenServiceConfig, TokenServiceDeps } from './token.types.js';
 
-export interface TokenServiceConfig {
-  privateKeyPem: string;
-  publicKeyPem: string;
-  accessTtlSec: number;
-  refreshTtlDays: number;
-}
-
-export interface TokenServiceDeps {
-  tokenRepo: ITokenRepository;
-  tenantRepo: ITenantRepository;
-  userRepo: IUserRepository;
-  membershipRepo: IMembershipRepository;
-  eventPublisher: IEventPublisher;
-  config: TokenServiceConfig;
-}
+export type { TokenServiceConfig, TokenServiceDeps };
 
 export class TokenService {
   constructor(private readonly deps: TokenServiceDeps) {}
-
-  private static sha256(data: string): string {
-    return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
-  }
 
   private privateKey: CryptoKey | null = null;
 
@@ -55,18 +35,42 @@ export class TokenService {
     return this.privateKey;
   }
 
-  private addDays(date: Date, days: number): Date {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
+  private async buildAccessToken(claims: {
+    sub: string;
+    tenantId: string;
+    email: string;
+    role: MembershipRole;
+    tenantStatus: TenantStatus;
+    plan: TenantPlan;
+    featureFlags: string[];
+  }): Promise<string> {
+    const jti = crypto.randomUUID();
+    const now = new Date();
+    const exp = Math.floor(now.getTime() / 1000) + this.deps.config.accessTtlSec;
+    const iat = Math.floor(now.getTime() / 1000);
+    const privateKey = await this.getPrivateKey();
+    return new SignJWT({
+      tenant_id: claims.tenantId,
+      email: claims.email,
+      role: claims.role,
+      tenant_status: claims.tenantStatus,
+      subscription_tier: claims.plan,
+      feature_flags: claims.featureFlags,
+    })
+      .setSubject(claims.sub)
+      .setJti(jti)
+      .setIssuedAt(iat)
+      .setExpirationTime(exp)
+      .setProtectedHeader({ alg: JWT_ALGORITHM_RS256 })
+      .sign(privateKey);
   }
 
   async issueTokens(opts: IssueTokenOpts): Promise<TokenPair> {
     const rawRefresh = crypto.randomBytes(64).toString('hex');
     const familyId = crypto.randomUUID();
-    const tokenHash = TokenService.sha256(rawRefresh);
+    const tokenHash = sha256(rawRefresh);
     const now = new Date();
-    const expiresAt = this.addDays(now, this.deps.config.refreshTtlDays);
+    const expiresAt = addDays(now, this.deps.config.refreshTtlDays);
 
     const createDto: CreateRefreshTokenDto = {
       userId: opts.userId,
@@ -79,31 +83,21 @@ export class TokenService {
     await this.deps.tokenRepo.create(createDto);
 
     const subscription = await this.deps.tenantRepo.getSubscription(opts.tenantId);
-    const jti = crypto.randomUUID();
-    const exp = Math.floor(now.getTime() / 1000) + this.deps.config.accessTtlSec;
-    const iat = Math.floor(now.getTime() / 1000);
-
-    const privateKey = await this.getPrivateKey();
-    const accessToken = await new SignJWT({
-      tenant_id: opts.tenantId,
+    const accessToken = await this.buildAccessToken({
+      sub: opts.userId,
+      tenantId: opts.tenantId,
       email: opts.email,
       role: opts.role,
-      tenant_status: opts.tenantStatus,
-      subscription_tier: subscription.plan,
-      feature_flags: subscription.featureFlags,
-    })
-      .setSubject(opts.userId)
-      .setJti(jti)
-      .setIssuedAt(iat)
-      .setExpirationTime(exp)
-      .setProtectedHeader({ alg: JWT_ALGORITHM_RS256 })
-      .sign(privateKey);
+      tenantStatus: opts.tenantStatus,
+      plan: subscription.plan,
+      featureFlags: subscription.featureFlags,
+    });
 
     return { accessToken, refreshToken: rawRefresh };
   }
 
   async rotateRefreshToken(rawToken: string): Promise<TokenPair> {
-    const tokenHash = TokenService.sha256(rawToken);
+    const tokenHash = sha256(rawToken);
     const existing = await this.deps.tokenRepo.findByHash(tokenHash);
 
     if (!existing) {
@@ -124,8 +118,8 @@ export class TokenService {
     }
 
     const newRawToken = crypto.randomBytes(64).toString('hex');
-    const newHash = TokenService.sha256(newRawToken);
-    const expiresAt = this.addDays(new Date(), this.deps.config.refreshTtlDays);
+    const newHash = sha256(newRawToken);
+    const expiresAt = addDays(new Date(), this.deps.config.refreshTtlDays);
 
     const rotateOpts: RotateTokenOpts = {
       oldHash: tokenHash,
@@ -149,33 +143,22 @@ export class TokenService {
     if (!membership) {
       throw new InvalidTokenError("User is not a member of this tenant");
     }
-    
-    const jti = crypto.randomUUID();
-    const now = new Date();
-    const exp = Math.floor(now.getTime() / 1000) + this.deps.config.accessTtlSec;
-    const iat = Math.floor(now.getTime() / 1000);
 
-    const privateKey = await this.getPrivateKey();
-    const accessToken = await new SignJWT({
-      tenant_id: tenantId,
+    const accessToken = await this.buildAccessToken({
+      sub: rotated.userId,
+      tenantId,
       email: user.email,
-      role: membership?.role ?? 'viewer',
-      tenant_status: subscription.status,
-      subscription_tier: subscription.plan,
-      feature_flags: subscription.featureFlags,
-    })
-      .setSubject(rotated.userId)
-      .setJti(jti)
-      .setIssuedAt(iat)
-      .setExpirationTime(exp)
-      .setProtectedHeader({ alg: JWT_ALGORITHM_RS256 })
-      .sign(privateKey);
+      role: membership.role ?? 'viewer',
+      tenantStatus: subscription.status,
+      plan: subscription.plan,
+      featureFlags: subscription.featureFlags,
+    });
 
     return { accessToken, refreshToken: newRawToken };
   }
 
   async revokeToken(rawToken: string): Promise<void> {
-    const tokenHash = TokenService.sha256(rawToken);
+    const tokenHash = sha256(rawToken);
     const existing = await this.deps.tokenRepo.findByHash(tokenHash);
     if (existing) {
       await this.deps.tokenRepo.revokeFamilyById(existing.familyId);

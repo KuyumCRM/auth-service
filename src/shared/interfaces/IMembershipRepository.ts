@@ -1,11 +1,12 @@
 // Port interface for membership operations.
-import type { Membership, CreateMembershipDto, MembershipRole } from '../../domain/auth/auth.types.js';
+import type { MembershipRole } from '../../domain/tenant/tenant.types.js';
+import type {
+  Membership,
+  CreateMembershipDto,
+  MembershipWithTenant,
+} from '../../domain/auth/auth.types.js';
 
-export interface MembershipWithTenant extends Membership {
-  tenantName: string;
-  tenantSlug: string;
-  tenantStatus: string;
-}
+export type { MembershipWithTenant };
 
 export interface IMembershipRepository {
   findById(id: string): Promise<Membership | null>;

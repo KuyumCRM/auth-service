@@ -26,6 +26,7 @@ import { AuthService } from '../domain/auth/auth.service.js';
 import { TenantService } from '../domain/tenant/tenant.service.js';
 import { InvitationService } from '../domain/invitation/invitation.service.js';
 import { createAuthenticateGuard } from '../shared/guards/authenticate.guard.js';
+import { createErrorHandler } from '../shared/errors/error-handler.js';
 import { corsPlugin } from './plugins/cors.plugin.js';
 import { cookiePlugin } from './plugins/cookie.plugin.js';
 import { jwtPlugin } from './plugins/jwt.plugin.js';
@@ -58,6 +59,8 @@ export async function createApp(): Promise<FastifyInstance> {
   await app.register(jwtPlugin);
   await app.register(rateLimitPlugin);
   await app.register(swaggerPlugin);
+
+  app.setErrorHandler(createErrorHandler());
 
   const privateKeyPem = decodePemFromB64(env.JWT_PRIVATE_KEY_B64);
   const publicKeyPem = decodePemFromB64(env.JWT_PUBLIC_KEY_B64);

@@ -1,10 +1,34 @@
 // JWT and refresh token types
 import type { TenantStatus, TenantPlan, MembershipRole } from '../tenant/tenant.types.js';
-
-/** Alias for JWT payload; same as TenantPlan. */
-export type SubscriptionTier = TenantPlan;
+import type { ITokenRepository } from '../../shared/interfaces/ITokenRepository.js';
+import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
+import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
+import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
+import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
 
 export type { TenantStatus, MembershipRole };
+
+export interface TokenServiceConfig {
+  privateKeyPem: string;
+  publicKeyPem: string;
+  accessTtlSec: number;
+  refreshTtlDays: number;
+}
+
+export interface TokenServiceDeps {
+  tokenRepo: ITokenRepository;
+  tenantRepo: ITenantRepository;
+  userRepo: IUserRepository;
+  membershipRepo: IMembershipRepository;
+  eventPublisher: IEventPublisher;
+  config: TokenServiceConfig;
+}
+
+/** Access + refresh token pair returned by issueTokens / rotateRefreshToken. */
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
 
 export interface JwtPayload {
   sub: string;
@@ -12,7 +36,7 @@ export interface JwtPayload {
   email: string;
   role: MembershipRole;
   tenant_status: TenantStatus;
-  subscription_tier: SubscriptionTier;
+  subscription_tier: TenantPlan;
   feature_flags: string[];
   jti: string;
   iat: number;

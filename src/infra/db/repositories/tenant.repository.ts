@@ -1,7 +1,7 @@
 // Real tenant repository backed by PostgreSQL.
 import type { ITenantRepository } from '../../../shared/interfaces/ITenantRepository.js';
 import type { TenantSubscription } from '../../../domain/tenant/tenant.types.js';
-import type { Tenant, CreateTenantDto, TenantStatus } from '../../../domain/auth/auth.types.js';
+import type { Tenant, CreateTenantDto, TenantStatus } from '../../../domain/tenant/tenant.types.js';
 import { AppDataSource } from '../data-source.js';
 import { TenantEntity } from '../entities/Tenant.entity.js';
 

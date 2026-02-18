@@ -1,7 +1,8 @@
 // Membership repository backed by PostgreSQL.
 import type { IMembershipRepository, MembershipWithTenant } from '../../../shared/interfaces/IMembershipRepository.js';
-import type { Membership, CreateMembershipDto, MembershipRole } from '../../../domain/auth/auth.types.js';
-import { MembershipAlreadyExistsError } from '../../../domain/auth/auth.errors.js';
+import type { MembershipRole } from '../../../domain/tenant/tenant.types.js';
+import type { Membership, CreateMembershipDto } from '../../../domain/auth/auth.types.js';
+import { MembershipAlreadyExistsError } from '../../../shared/errors/domain-errors.js';
 import { PG_UNIQUE_VIOLATION } from '../../../config/constants.js';
 import { AppDataSource } from '../data-source.js';
 import { MembershipEntity } from '../entities/Membership.entity.js';

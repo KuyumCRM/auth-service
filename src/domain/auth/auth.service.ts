@@ -1,19 +1,7 @@
 // Core auth orchestration logic.
-import * as crypto from 'crypto';
-import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
-import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
-import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
-import type { IInvitationRepository } from '../../shared/interfaces/IInvitationRepository.js';
-import type { IAuditRepository } from '../../shared/interfaces/IAuditRepository.js';
-import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
-import type { IOneTimeTokenRepository } from '../../shared/interfaces/IOneTimeTokenRepository.js';
-import type { IEmailSender } from '../../shared/interfaces/IEmailSender.js';
-import type { IOnboardingSessionStore } from '../../shared/interfaces/IOnboardingSessionStore.js';
-import type { IInstagramTokenRepository } from '../../shared/interfaces/IInstagramTokenRepository.js';
 import type { CreateIgConnectionDto } from '../instagram/instagram.types.js';
-import type { PasswordService } from '../password/password.service.js';
-import type { TokenService } from '../token/token.service.js';
-import type { TotpService } from '../mfa/totp.service.js';
+import type { CreateTenantDto } from '../tenant/tenant.types.js';
+import type { TokenPair } from '../token/token.types.js';
 import type {
   User,
   SignupWithOnboardingDto,
@@ -23,15 +11,13 @@ import type {
   AcceptInviteDto,
   AcceptInviteResult,
   MembershipInfo,
-  TokenPair,
-  CreateTenantDto,
   MeResult,
-  TenantStatus,
   CreateWorkspaceOpts,
   CreateWorkspaceResult,
   WorkspaceResult,
 } from './auth.types.js';
 import type { OnboardingSessionPayload } from '../instagram/onboarding.types.js';
+import { sha256, generateSecureToken, slugify, toMembershipInfo, toMeIgConnection } from '../../shared/utils/index.js';
 import { PASSWORD_RESET_EXPIRY_HOURS } from '../../config/constants.js';
 import {
   AppError,
@@ -39,36 +25,8 @@ import {
   AccountLockedError,
   InvalidOnboardingTokenError,
   UserNotFoundError,
-} from './auth.errors.js';
-
-export interface AuthServiceDeps {
-  userRepo: IUserRepository;
-  tenantRepo: ITenantRepository;
-  membershipRepo: IMembershipRepository;
-  invitationRepo: IInvitationRepository;
-  auditRepo: IAuditRepository;
-  eventPublisher: IEventPublisher;
-  passwordService: PasswordService;
-  tokenService: TokenService;
-  totpService: TotpService;
-  oneTimeTokenRepo: IOneTimeTokenRepository;
-  emailSender: IEmailSender;
-  resetPasswordBaseUrl: string;
-  onboardingSessionStore: IOnboardingSessionStore;
-  instagramRepo: IInstagramTokenRepository;
-}
-
-function sha256(data: string): string {
-  return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
-}
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+} from '../../shared/errors/domain-errors.js';
+import type { AuthServiceDeps } from './auth.types.js';
 
 export class AuthService {
   constructor(private readonly deps: AuthServiceDeps) {}
@@ -120,7 +78,7 @@ export class AuthService {
     let slug = slugify(name);
     const existingTenant = await this.deps.tenantRepo.findBySlug(slug);
     if (existingTenant) {
-      slug = `${slug}-${crypto.randomBytes(3).toString('hex')}`;
+      slug = `${slug}-${generateSecureToken(3)}`;
     }
     const createTenantOpts: CreateTenantDto = {
       name,
@@ -348,13 +306,7 @@ export class AuthService {
       tenantId: currentTenant.id,
     });
 
-    const tenants: MembershipInfo[] = memberships.map((m) => ({
-      tenantId: m.tenantId,
-      tenantName: m.tenantName,
-      tenantSlug: m.tenantSlug,
-      tenantStatus: m.tenantStatus as LoginResult['currentTenant']['status'],
-      role: m.role,
-    }));
+    const tenants: MembershipInfo[] = memberships.map(toMembershipInfo);
 
     return {
       user,
@@ -462,7 +414,7 @@ export class AuthService {
     if (!user) {
       return;
     }
-    const rawToken = crypto.randomBytes(32).toString('hex');
+    const rawToken = generateSecureToken();
     const tokenHash = sha256(rawToken);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + PASSWORD_RESET_EXPIRY_HOURS);
@@ -543,19 +495,8 @@ export class AuthService {
       mfaEnabled: user.mfaEnabled,
       currentTenant: currentTenant ?? undefined,
       currentRole: currentMembership?.role ?? undefined,
-      memberships: memberships.map((m) => ({
-        tenantId: m.tenantId,
-        tenantName: m.tenantName,
-        tenantSlug: m.tenantSlug,
-        tenantStatus: m.tenantStatus as TenantStatus,
-        role: m.role,
-      })),
-      igConnections: connections.map((c) => ({
-        id: c.id,
-        igUserId: c.igUserId,
-        igUsername: c.igUsername,
-        isActive: c.isActive,
-      })),
+      memberships: memberships.map(toMembershipInfo),
+      igConnections: connections.map(toMeIgConnection),
     };
   }
 }

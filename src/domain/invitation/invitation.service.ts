@@ -1,34 +1,9 @@
 // Invitation domain service — create, list, cancel invitations.
-import * as crypto from 'crypto';
-import type { IInvitationRepository } from '../../shared/interfaces/IInvitationRepository.js';
-import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
-import type { IUserRepository } from '../../shared/interfaces/IUserRepository.js';
-import type { IEmailSender } from '../../shared/interfaces/IEmailSender.js';
-import type { IAuditRepository } from '../../shared/interfaces/IAuditRepository.js';
-import type { MembershipRole } from '../tenant/tenant.types.js';
+import { sha256, generateSecureToken, addDays } from '../../shared/utils/index.js';
 import type { Invitation } from './invitation.types.js';
 import { INVITE_EXPIRY_DAYS } from '../../config/constants.js';
-import { AppError } from '../auth/auth.errors.js';
-
-function sha256(data: string): string {
-  return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
-}
-
-export interface CreateInviteInput {
-  tenantId: string;
-  email: string;
-  role: MembershipRole;
-  invitedBy: string;
-}
-
-export interface InvitationServiceDeps {
-  invitationRepo: IInvitationRepository;
-  membershipRepo: IMembershipRepository;
-  userRepo: IUserRepository;
-  emailSender: IEmailSender;
-  auditRepo: IAuditRepository;
-  inviteBaseUrl: string;
-}
+import { AppError } from '../../shared/errors/domain-errors.js';
+import type { CreateInviteInput, InvitationServiceDeps } from './invitation.types.js';
 
 export class InvitationService {
   constructor(private readonly deps: InvitationServiceDeps) {}
@@ -54,10 +29,9 @@ export class InvitationService {
       throw new AppError('An active invitation already exists for this email', 409);
     }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
+    const rawToken = generateSecureToken();
     const tokenHash = sha256(rawToken);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
+    const expiresAt = addDays(new Date(), INVITE_EXPIRY_DAYS);
 
     const invitation = await this.deps.invitationRepo.create({
       tenantId: input.tenantId,

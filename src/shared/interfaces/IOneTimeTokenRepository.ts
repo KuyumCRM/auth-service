@@ -1,22 +1,11 @@
 // Port interface for one-time tokens (email verify, password reset).
-export type OneTimeTokenType = 'email_verify' | 'password_reset' | 'mfa_backup';
+import type {
+  OneTimeTokenType,
+  OneTimeToken,
+  CreateOneTimeTokenDto,
+} from '../../domain/one-time-token/one-time-token.types.js';
 
-export interface OneTimeToken {
-  id: string;
-  userId: string;
-  tokenHash: string;
-  type: OneTimeTokenType;
-  expiresAt: Date;
-  usedAt: Date | null;
-  createdAt: Date;
-}
-
-export interface CreateOneTimeTokenDto {
-  userId: string;
-  tokenHash: string;
-  type: OneTimeTokenType;
-  expiresAt: Date;
-}
+export type { OneTimeTokenType, OneTimeToken, CreateOneTimeTokenDto };
 
 export interface IOneTimeTokenRepository {
   create(data: CreateOneTimeTokenDto): Promise<OneTimeToken>;

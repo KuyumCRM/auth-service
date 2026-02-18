@@ -1,17 +1,7 @@
 // Tenant management domain service.
-import type { ITenantRepository } from '../../shared/interfaces/ITenantRepository.js';
-import type { IMembershipRepository } from '../../shared/interfaces/IMembershipRepository.js';
-import type { IEventPublisher } from '../../shared/interfaces/IEventPublisher.js';
-import type { IAuditRepository } from '../../shared/interfaces/IAuditRepository.js';
-import type { Tenant, Membership, MembershipRole } from '../auth/auth.types.js';
-import { AppError } from '../auth/auth.errors.js';
-
-export interface TenantServiceDeps {
-  tenantRepo: ITenantRepository;
-  membershipRepo: IMembershipRepository;
-  eventPublisher: IEventPublisher;
-  auditRepo: IAuditRepository;
-}
+import type { Tenant, MembershipRole, TenantServiceDeps } from './tenant.types.js';
+import type { Membership } from '../auth/auth.types.js';
+import { AppError } from '../../shared/errors/domain-errors.js';
 
 export class TenantService {
   constructor(private readonly deps: TenantServiceDeps) {}
