@@ -43,6 +43,13 @@ const envSchema = z.object({
   // Internal
   INTERNAL_API_KEY: z.string().min(32), // For service-to-service calls
   DASHBOARD_URL: z.string().url(), // Post-OAuth redirect target
+
+  // Email (Resend) — when absent or empty, stub email sender is used
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z
+    .string()
+    .optional()
+    .default('onboarding@resend.dev'),
 });
 
 export const env = envSchema.parse(process.env);

@@ -15,7 +15,10 @@ import { createEncryption } from '../infra/encryption/aes.service.js';
 import { InstagramOAuthService } from '../domain/instagram/instagram-oauth.service.js';
 import { GoogleOAuthService } from '../domain/google/google-oauth.service.js';
 import { createStubEventPublisher } from '../infra/kafka/stub-event.publisher.js';
-import { createStubEmailSender } from '../infra/email/stub-email.sender.js';
+import {
+  createStubEmailSender,
+} from '../infra/email/stub-email.sender.js';
+import { createResendEmailSender } from '../infra/email/resend-email.sender.js';
 import { createUserRepository } from '../infra/db/repositories/user.repository.js';
 import { createTenantRepository } from '../infra/db/repositories/tenant.repository.js';
 import { createMembershipRepository } from '../infra/db/repositories/membership.repository.js';
@@ -94,7 +97,9 @@ export async function createApp(): Promise<FastifyInstance> {
   const oneTimeTokenService = new OneTimeTokenService({ oneTimeTokenRepo });
 
   const eventPublisher = createStubEventPublisher();
-  const emailSender = createStubEmailSender();
+  const emailSender = env.RESEND_API_KEY
+    ? createResendEmailSender(env.RESEND_API_KEY, env.RESEND_FROM_EMAIL)
+    : createStubEmailSender();
   const passwordService = new PasswordService();
   const totpService = new TotpService();
 
