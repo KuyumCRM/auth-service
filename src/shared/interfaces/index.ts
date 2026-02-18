@@ -5,6 +5,10 @@ export type { IEmailSender } from './IEmailSender.js';
 export type { IEncryption } from './IEncryption.js';
 export type { IEventPublisher } from './IEventPublisher.js';
 export type {
+  IGoogleOAuthStateStore,
+  GoogleStatePayload,
+} from './IGoogleOAuthStateStore.js';
+export type {
   IInstagramTokenRepository,
 } from './IInstagramTokenRepository.js';
 export type { IInvitationRepository } from './IInvitationRepository.js';

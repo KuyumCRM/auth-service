@@ -12,6 +12,9 @@ export class UserEntity {
   @Column({ type: 'text', unique: true })
   email!: string;
 
+  @Column({ name: 'google_id', type: 'text', unique: true, nullable: true })
+  googleId!: string | null;
+
   @Column({ name: 'password_hash', type: 'text', nullable: true })
   passwordHash!: string | null;
 

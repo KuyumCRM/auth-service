@@ -32,6 +32,11 @@ const envSchema = z.object({
   IG_APP_SECRET: z.string().min(1),
   IG_REDIRECT_URI: z.string().url(),
 
+  // Google OAuth
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_REDIRECT_URI: z.string().url(),
+
   // Encryption
   ENCRYPTION_KEY_B64: z.string().length(44), // 32 bytes base64 = 44 chars
 

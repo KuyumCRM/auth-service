@@ -1,5 +1,9 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ * Single consolidated migration: schema, tables, indexes, updated_at triggers,
+ * unique active ig_user_id constraint, and google_id column.
+ */
 export class InitialSchema0001 implements MigrationInterface {
   name = 'InitialSchema0001';
 
@@ -26,11 +30,12 @@ export class InitialSchema0001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX idx_tenants_slug ON auth.tenants(slug)`);
     await queryRunner.query(`CREATE INDEX idx_tenants_status ON auth.tenants(status)`);
 
-    // auth.users
+    // auth.users (includes google_id for Google OAuth)
     await queryRunner.query(`
       CREATE TABLE auth.users (
         id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email               TEXT NOT NULL UNIQUE,
+        google_id           TEXT UNIQUE,
         password_hash       TEXT,
         email_verified      BOOLEAN NOT NULL DEFAULT FALSE,
         mfa_secret          TEXT,
@@ -45,6 +50,7 @@ export class InitialSchema0001 implements MigrationInterface {
     `);
     await queryRunner.query(`CREATE INDEX idx_users_email ON auth.users(email)`);
     await queryRunner.query(`CREATE INDEX idx_users_default_tenant ON auth.users(default_tenant_id)`);
+    await queryRunner.query(`CREATE INDEX idx_users_google_id ON auth.users(google_id)`);
 
     // auth.memberships
     await queryRunner.query(`
@@ -84,7 +90,7 @@ export class InitialSchema0001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX idx_invitations_email ON auth.invitations(email)`);
     await queryRunner.query(`CREATE INDEX idx_invitations_token ON auth.invitations(token_hash)`);
 
-    // auth.refresh_tokens (now with tenant_id instead of device_info hack)
+    // auth.refresh_tokens
     await queryRunner.query(`
       CREATE TABLE auth.refresh_tokens (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -117,7 +123,7 @@ export class InitialSchema0001 implements MigrationInterface {
       )
     `);
 
-    // auth.instagram_connections (now references tenants)
+    // auth.instagram_connections
     await queryRunner.query(`
       CREATE TABLE auth.instagram_connections (
         id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,8 +145,13 @@ export class InitialSchema0001 implements MigrationInterface {
     `);
     await queryRunner.query(`CREATE INDEX idx_ig_conn_tenant ON auth.instagram_connections(tenant_id)`);
     await queryRunner.query(`CREATE INDEX idx_ig_conn_expires ON auth.instagram_connections(token_expires_at)`);
+    await queryRunner.query(`
+      CREATE UNIQUE INDEX idx_instagram_connections_active_ig_user_id
+      ON auth.instagram_connections(ig_user_id)
+      WHERE is_active = true
+    `);
 
-    // auth.api_keys (now references tenants)
+    // auth.api_keys
     await queryRunner.query(`
       CREATE TABLE auth.api_keys (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -181,9 +192,53 @@ export class InitialSchema0001 implements MigrationInterface {
       CREATE TABLE auth.audit_log_2026_03 PARTITION OF auth.audit_log
       FOR VALUES FROM ('2026-03-01') TO ('2026-04-01')
     `);
+
+    // updated_at triggers
+    await queryRunner.query(`
+      CREATE OR REPLACE FUNCTION auth.set_updated_at()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+
+    const tablesWithUpdatedAt = [
+      'tenants',
+      'users',
+      'memberships',
+      'invitations',
+      'instagram_connections',
+    ];
+
+    for (const table of tablesWithUpdatedAt) {
+      await queryRunner.query(`
+        CREATE TRIGGER tr_${table}_updated_at
+        BEFORE UPDATE ON auth.${table}
+        FOR EACH ROW
+        EXECUTE FUNCTION auth.set_updated_at()
+      `);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop triggers first
+    const tablesWithUpdatedAt = [
+      'instagram_connections',
+      'invitations',
+      'memberships',
+      'users',
+      'tenants',
+    ];
+
+    for (const table of tablesWithUpdatedAt) {
+      await queryRunner.query(`DROP TRIGGER IF EXISTS tr_${table}_updated_at ON auth.${table}`);
+    }
+
+    await queryRunner.query(`DROP FUNCTION IF EXISTS auth.set_updated_at()`);
+
+    // Drop tables (order matters for FK constraints)
     await queryRunner.query(`DROP TABLE IF EXISTS auth.audit_log_2026_03`);
     await queryRunner.query(`DROP TABLE IF EXISTS auth.audit_log_2026_02`);
     await queryRunner.query(`DROP TABLE IF EXISTS auth.audit_log_2026_01`);

@@ -13,6 +13,12 @@ export const INSTAGRAM_GRAPH_ME = 'https://graph.instagram.com/me';
 export const ONBOARD_SCOPES = 'user_profile,user_media';
 export const ALLOWED_ACCOUNT_TYPES = new Set<string>(['BUSINESS', 'CREATOR']);
 
+// ——— Google OAuth ———
+export const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+export const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+export const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+export const GOOGLE_SCOPES = 'openid email profile';
+
 // ——— AES encryption ———
 export const AES_ALGORITHM = 'aes-256-gcm';
 export const AES_IV_LENGTH = 12;
@@ -22,10 +28,12 @@ export const AES_KEY_LENGTH = 32;
 // ——— Redis key prefixes ———
 export const ONBOARDING_KEY_PREFIX = 'onboard:';
 export const OAUTH_STATE_PREFIX = 'oauth_state:';
+export const GOOGLE_OAUTH_STATE_PREFIX = 'google_oauth_state:';
 export const JTI_KEY_PREFIX = 'jti:';
 
 // ——— API route prefixes ———
 export const API_V1_AUTH_PREFIX = '/api/v1/auth';
+export const API_V1_AUTH_GOOGLE_PREFIX = '/api/v1/auth/google';
 export const API_V1_PASSWORD_PREFIX = '/api/v1/password';
 export const API_V1_TENANT_PREFIX = '/api/v1/tenant';
 export const API_V1_AUTH_INSTAGRAM_PREFIX = '/api/v1/auth/instagram';
@@ -59,6 +67,10 @@ export const ROUTE_SWITCH_TENANT = '/switch-tenant';
 export const ROUTE_LOGOUT = '/logout';
 export const ROUTE_ME = '/me';
 
+// ——— Google OAuth route paths (relative to API_V1_AUTH_GOOGLE_PREFIX) ———
+export const ROUTE_GOOGLE_INITIATE = '/initiate';
+export const ROUTE_GOOGLE_CALLBACK = '/callback';
+
 // ——— Password API route paths (relative to API_V1_PASSWORD_PREFIX) ———
 export const ROUTE_FORGOT_PASSWORD = '/forgot-password';
 export const ROUTE_RESET_PASSWORD = '/reset-password';
@@ -77,6 +89,7 @@ export const ERROR_CODE_APP_ERROR = 'app_error';
 export const ERROR_CODE_INVALID_CREDENTIALS = 'invalid_credentials';
 export const ERROR_CODE_ACCOUNT_LOCKED = 'account_locked';
 export const ERROR_CODE_OAUTH_EXCHANGE_FAILED = 'oauth_exchange_failed';
+export const ERROR_CODE_GOOGLE_OAUTH_FAILED = 'google_oauth_failed';
 export const ERROR_CODE_INTERNAL = 'internal';
 export const ERROR_CODE_INVALID = 'invalid';
 export const ERROR_CODE_NOT_FOUND = 'not_found';

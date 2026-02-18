@@ -17,6 +17,7 @@ import type {
   WorkspaceResult,
 } from './auth.types.js';
 import type { OnboardingSessionPayload } from '../instagram/onboarding.types.js';
+import type { GoogleProfile } from '../google/google-oauth.types.js';
 import { generateSecureToken, sha256, slugify, toMembershipInfo, toMeIgConnection } from '../../shared/utils/index.js';
 import {
   AppError,
@@ -314,6 +315,118 @@ export class AuthService {
       currentRole: currentMembership.role,
       tenants,
     };
+  }
+
+  /**
+   * Login via Google OAuth: find user by googleId or email (and link googleId if found by email), then same as login().
+   */
+  async googleLogin(profile: GoogleProfile): Promise<LoginResult> {
+    let user = await this.deps.userRepo.findByGoogleId(profile.googleId);
+    if (!user) {
+      user = await this.deps.userRepo.findByEmail(profile.email);
+      if (user) {
+        await this.deps.userRepo.update(user.id, { googleId: profile.googleId });
+      }
+    }
+    if (!user) {
+      throw new AppError('No account found. Please sign up first.', 403);
+    }
+    if (!user.isActive) {
+      throw new AccountLockedError();
+    }
+
+    const memberships = await this.deps.membershipRepo.findAllByUserId(user.id);
+    if (memberships.length === 0) {
+      throw new AppError('No active memberships found', 403);
+    }
+
+    let currentMembership = memberships[0];
+    if (user.defaultTenantId) {
+      const defaultMatch = memberships.find(
+        (m) => m.tenantId === user!.defaultTenantId
+      );
+      if (defaultMatch) {
+        currentMembership = defaultMatch;
+      }
+    }
+
+    const currentTenant = await this.deps.tenantRepo.findById(currentMembership.tenantId);
+    if (!currentTenant) {
+      throw new AppError('Tenant not found', 404);
+    }
+
+    const tokens = await this.deps.tokenService.issueTokens({
+      userId: user.id,
+      tenantId: currentTenant.id,
+      email: user.email,
+      role: currentMembership.role,
+      tenantStatus: currentTenant.status,
+      deviceInfo: {},
+    });
+
+    await this.deps.userRepo.update(user.id, {
+      lastLoginAt: new Date(),
+      loginCount: user.loginCount + 1,
+      defaultTenantId: currentTenant.id,
+    });
+
+    await this.deps.eventPublisher.publish('auth.user.logged_in', {
+      userId: user.id,
+      tenantId: currentTenant.id,
+    });
+
+    await this.deps.auditRepo.create({
+      eventType: 'user.logged_in',
+      userId: user.id,
+      tenantId: currentTenant.id,
+    });
+
+    const tenants: MembershipInfo[] = memberships.map(toMembershipInfo);
+
+    return {
+      user,
+      tokens,
+      currentTenant,
+      currentRole: currentMembership.role,
+      tenants,
+    };
+  }
+
+  /**
+   * Signup via Google OAuth after Instagram onboarding: consume onboarding token, create user (no password), create workspace.
+   */
+  async googleSignup(profile: GoogleProfile, onboardingToken: string): Promise<SignupResult> {
+    const payload = await this.deps.onboardingSessionStore.consume(onboardingToken);
+    if (!payload) {
+      throw new InvalidOnboardingTokenError();
+    }
+
+    const existingUser = await this.deps.userRepo.findByEmail(profile.email);
+    if (existingUser) {
+      throw new AppError('Email already in use', 409);
+    }
+
+    const user = await this.deps.userRepo.create({
+      email: profile.email,
+      googleId: profile.googleId,
+      passwordHash: null,
+      emailVerified: profile.emailVerified ?? true,
+    });
+
+    await this.deps.eventPublisher.publish('auth.user.registered', {
+      userId: user.id,
+    });
+    await this.deps.auditRepo.create({
+      eventType: 'user.registered',
+      userId: user.id,
+    });
+
+    const workspace = await this.createWorkspaceForUser(
+      user.id,
+      user.email,
+      payload
+    );
+    return { user, ...workspace };
   }
 
   /**

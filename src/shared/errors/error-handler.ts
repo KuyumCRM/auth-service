@@ -5,6 +5,7 @@ import {
   ERROR_CODE_INVALID_CREDENTIALS,
   ERROR_CODE_ACCOUNT_LOCKED,
   ERROR_CODE_OAUTH_EXCHANGE_FAILED,
+  ERROR_CODE_GOOGLE_OAUTH_FAILED,
   ERROR_CODE_INTERNAL,
   ERROR_MSG_INVALID_CREDENTIALS,
   ERROR_MSG_INTERNAL_SERVER,
@@ -18,6 +19,7 @@ import {
   InstagramPersonalAccountError,
   InstagramAlreadyHasWorkspaceError,
   InstagramOAuthError,
+  GoogleOAuthError,
 } from './domain-errors.js';
 
 /** Check if error has a `code` property (typed for domain errors that extend AppError). */
@@ -60,6 +62,10 @@ export function createErrorHandler() {
     }
     if (err instanceof InstagramOAuthError) {
       reply.status(502).send({ error: err.message, code: ERROR_CODE_OAUTH_EXCHANGE_FAILED });
+      return;
+    }
+    if (err instanceof GoogleOAuthError) {
+      reply.status(502).send({ error: err.message, code: ERROR_CODE_GOOGLE_OAUTH_FAILED });
       return;
     }
     if (err instanceof AppError) {

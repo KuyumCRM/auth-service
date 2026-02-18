@@ -32,6 +32,7 @@ export interface AuthServiceDeps {
 export interface User {
   id: string;
   email: string;
+  googleId: string | null;
   passwordHash: string | null;
   emailVerified: boolean;
   mfaSecret: string | null;
@@ -120,6 +121,7 @@ export interface AcceptInviteDto {
 /** Input for creating a user (id, createdAt, updatedAt are DB-generated). */
 export interface CreateUserDto {
   email: string;
+  googleId?: string | null;
   passwordHash?: string | null;
   emailVerified?: boolean;
   mfaSecret?: string | null;

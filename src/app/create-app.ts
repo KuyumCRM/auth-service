@@ -6,9 +6,14 @@ import { ONBOARDING_TTL_SEC, OAUTH_STATE_TTL_SEC } from '../config/constants.js'
 import { initializeDataSource, getDataSource } from '../infra/db/data-source.js';
 import { getRedisClient } from '../infra/redis/redis.client.js';
 import { createTokenBlacklist } from '../infra/redis/token-blacklist.cache.js';
-import { createOnboardingSessionStore, createOAuthStateStore } from '../infra/redis/session.cache.js';
+import {
+  createOnboardingSessionStore,
+  createOAuthStateStore,
+  createGoogleOAuthStateStore,
+} from '../infra/redis/session.cache.js';
 import { createEncryption } from '../infra/encryption/aes.service.js';
 import { InstagramOAuthService } from '../domain/instagram/instagram-oauth.service.js';
+import { GoogleOAuthService } from '../domain/google/google-oauth.service.js';
 import { createStubEventPublisher } from '../infra/kafka/stub-event.publisher.js';
 import { createStubEmailSender } from '../infra/email/stub-email.sender.js';
 import { createUserRepository } from '../infra/db/repositories/user.repository.js';
@@ -164,6 +169,14 @@ export async function createApp(): Promise<FastifyInstance> {
     onboardingTtlSec: ONBOARDING_TTL_SEC,
   });
 
+  const googleStateStore = createGoogleOAuthStateStore(OAUTH_STATE_TTL_SEC);
+  const googleOAuthService = new GoogleOAuthService({
+    googleStateStore,
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+    redirectUri: env.GOOGLE_REDIRECT_URI,
+  });
+
   app.decorate('authService', authService);
   app.decorate('passwordResetService', passwordResetService);
   app.decorate('tokenService', tokenService);
@@ -174,6 +187,7 @@ export async function createApp(): Promise<FastifyInstance> {
   app.decorate('membershipRepo', membershipRepo);
   app.decorate('instagramRepo', instagramRepo);
   app.decorate('instagramOAuthService', instagramOAuthService);
+  app.decorate('googleOAuthService', googleOAuthService);
   app.decorate('authenticateGuard', authenticateGuard);
   app.decorate('optionalAuthenticateGuard', optionalAuthenticateGuard);
   app.decorate('tokenBlacklist', tokenBlacklist);

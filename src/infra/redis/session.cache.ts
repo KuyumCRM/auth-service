@@ -2,11 +2,17 @@
 import * as crypto from 'crypto';
 import type { IOnboardingSessionStore } from '../../shared/interfaces/IOnboardingSessionStore.js';
 import type { IOAuthStateStore } from '../../shared/interfaces/IOAuthStateStore.js';
+import type {
+  IGoogleOAuthStateStore,
+  GoogleStatePayload,
+} from '../../shared/interfaces/IGoogleOAuthStateStore.js';
 import type { OnboardingSessionPayload } from '../../domain/instagram/onboarding.types.js';
 import {
   ONBOARDING_KEY_PREFIX,
   OAUTH_STATE_PREFIX,
+  GOOGLE_OAUTH_STATE_PREFIX,
   ONBOARDING_TTL_SEC as DEFAULT_ONBOARDING_TTL_SEC,
+  OAUTH_STATE_TTL_SEC,
 } from '../../config/constants.js';
 import { getRedisClient } from './redis.client.js';
 
@@ -76,6 +82,43 @@ export function createOAuthStateStore(ttlSec: number = 600): IOAuthStateStore {
       const results = await multi.exec();
       const value = results?.[0]?.[1];
       return value === 'onboard';
+    },
+  };
+}
+
+/** Store Google OAuth state with payload (mode, optional onboardingToken) for CSRF and flow context. */
+export function createGoogleOAuthStateStore(
+  ttlSec: number = OAUTH_STATE_TTL_SEC
+): IGoogleOAuthStateStore {
+  const client = getRedisClient();
+
+  return {
+    async set(state: string, payload: GoogleStatePayload): Promise<void> {
+      const key = GOOGLE_OAUTH_STATE_PREFIX + state;
+      await client.set(key, JSON.stringify(payload), 'EX', ttlSec);
+    },
+
+    async validateAndConsume(state: string): Promise<GoogleStatePayload | null> {
+      const key = GOOGLE_OAUTH_STATE_PREFIX + state;
+      const multi = client.multi();
+      multi.get(key);
+      multi.del(key);
+      const results = await multi.exec();
+      const raw = results?.[0]?.[1];
+      if (typeof raw !== 'string') return null;
+      try {
+        const parsed = JSON.parse(raw) as GoogleStatePayload;
+        if (
+          (parsed.mode === 'login' || parsed.mode === 'signup') &&
+          (parsed.onboardingToken === undefined ||
+            typeof parsed.onboardingToken === 'string')
+        ) {
+          return parsed;
+        }
+      } catch {
+        /* invalid json */
+      }
+      return null;
     },
   };
 }

@@ -8,6 +8,7 @@ function entityToUser(entity: UserEntity): User {
   return {
     id: entity.id,
     email: entity.email,
+    googleId: entity.googleId,
     passwordHash: entity.passwordHash,
     emailVerified: entity.emailVerified,
     mfaSecret: entity.mfaSecret,
@@ -35,9 +36,15 @@ export function createUserRepository(): IUserRepository {
       return entity ? entityToUser(entity) : null;
     },
 
+    async findByGoogleId(googleId: string): Promise<User | null> {
+      const entity = await repository.findOne({ where: { googleId } });
+      return entity ? entityToUser(entity) : null;
+    },
+
     async create(data: CreateUserDto): Promise<User> {
       const entity = repository.create({
         email: data.email,
+        googleId: data.googleId ?? null,
         passwordHash: data.passwordHash ?? null,
         emailVerified: data.emailVerified ?? false,
         mfaSecret: data.mfaSecret ?? null,
@@ -54,6 +61,7 @@ export function createUserRepository(): IUserRepository {
     async update(id: string, data: Partial<User>): Promise<User> {
       const updateData: Partial<UserEntity> = {};
       if (data.email !== undefined) updateData.email = data.email;
+      if (data.googleId !== undefined) updateData.googleId = data.googleId;
       if (data.passwordHash !== undefined) updateData.passwordHash = data.passwordHash;
       if (data.emailVerified !== undefined) updateData.emailVerified = data.emailVerified;
       if (data.mfaSecret !== undefined) updateData.mfaSecret = data.mfaSecret;

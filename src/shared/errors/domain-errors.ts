@@ -98,6 +98,15 @@ export class InstagramAlreadyHasWorkspaceError extends AppError {
   }
 }
 
+// ——— Google OAuth ———
+export class GoogleOAuthError extends AppError {
+  constructor(message = 'Google OAuth failed') {
+    super(message, 502);
+    this.name = 'GoogleOAuthError';
+    Object.setPrototypeOf(this, GoogleOAuthError.prototype);
+  }
+}
+
 /** Thrown when onboarding token is missing, expired, or already consumed. */
 export class InvalidOnboardingTokenError extends AppError {
   readonly code = 'invalid_onboarding_token' as const;
