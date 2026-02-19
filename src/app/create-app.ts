@@ -151,7 +151,7 @@ export async function createApp(): Promise<FastifyInstance> {
     auditRepo,
   });
 
-  const inviteBaseUrl = `${env.DASHBOARD_URL}/accept-invite`;
+  const inviteBaseUrl = `${env.DASHBOARD_URL}/auth/accept-invite`;
   const invitationService = new InvitationService({
     invitationRepo,
     membershipRepo,
