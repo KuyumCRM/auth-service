@@ -7,10 +7,10 @@ export const ONBOARDING_TTL_SEC = 15 * 60;
 export const OAUTH_STATE_TTL_SEC = 600;
 
 // ——— Instagram OAuth ———
-export const INSTAGRAM_AUTH_URL = 'https://api.instagram.com/oauth/authorize';
+export const INSTAGRAM_AUTH_URL = 'https://www.instagram.com/oauth/authorize';
 export const INSTAGRAM_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
 export const INSTAGRAM_GRAPH_ME = 'https://graph.instagram.com/me';
-export const ONBOARD_SCOPES = 'user_profile,user_media';
+export const ONBOARD_SCOPES = 'instagram_business_basic';
 export const ALLOWED_ACCOUNT_TYPES = new Set<string>(['BUSINESS', 'CREATOR']);
 
 // ——— Google OAuth ———

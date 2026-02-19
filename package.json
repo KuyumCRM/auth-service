@@ -19,14 +19,16 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "docker:dev": "docker-compose -f docker/docker-compose.yml up --build",
+    "docker:auth:restart": "docker-compose -f docker/docker-compose.yml up --build auth-service",
     "docker:down": "docker-compose -f docker/docker-compose.yml down -v"
   },
   "dependencies": {
+    "dotenv": "^16.4.0",
     "@aws-sdk/client-secrets-manager": "^3.0.0",
     "@fastify/cookie": "^9.0.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/jwt": "^8.0.0",
-    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/rate-limit": "^9.0.0",
     "@fastify/swagger": "^8.0.0",
     "axios": "^1.6.0",
     "bcrypt": "^5.1.0",

@@ -4,8 +4,8 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * Single consolidated migration: schema, tables, indexes, updated_at triggers,
  * unique active ig_user_id constraint, and google_id column.
  */
-export class InitialSchema0001 implements MigrationInterface {
-  name = 'InitialSchema0001';
+export class InitialSchema1739900000000 implements MigrationInterface {
+  name = 'InitialSchema1739900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Schema
@@ -167,17 +167,18 @@ export class InitialSchema0001 implements MigrationInterface {
       )
     `);
 
-    // auth.audit_log (partitioned table)
+    // auth.audit_log (partitioned table; PK must include partition key created_at)
     await queryRunner.query(`
       CREATE TABLE auth.audit_log (
-        id          BIGSERIAL PRIMARY KEY,
+        id          BIGSERIAL,
         event_type  TEXT NOT NULL,
         user_id     UUID,
         tenant_id   UUID,
         ip_address  INET,
         user_agent  TEXT,
         metadata    JSONB,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (id, created_at)
       ) PARTITION BY RANGE (created_at)
     `);
     await queryRunner.query(`
