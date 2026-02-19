@@ -131,11 +131,6 @@ export class AuthService {
    * Owner signup gated by Instagram onboarding: consume one-time session, create user + workspace (tenant + membership + IG connection).
    */
   async signupWithOnboarding(dto: SignupWithOnboardingDto): Promise<SignupResult> {
-    const payload = await this.deps.onboardingSessionStore.consume(dto.onboardingToken);
-    if (!payload) {
-      throw new InvalidOnboardingTokenError();
-    }
-
     const policyResult = this.deps.passwordService.validatePolicy(dto.password);
     if (!policyResult.valid) {
       throw new AppError(policyResult.errors.join('; '), 400);
@@ -144,6 +139,11 @@ export class AuthService {
     const existingUser = await this.deps.userRepo.findByEmail(dto.email);
     if (existingUser) {
       throw new AppError('Email already in use', 409);
+    }
+
+    const payload = await this.deps.onboardingSessionStore.consume(dto.onboardingToken);
+    if (!payload) {
+      throw new InvalidOnboardingTokenError();
     }
 
     const passwordHash = await this.deps.passwordService.hash(dto.password);
@@ -396,14 +396,14 @@ export class AuthService {
    * Signup via Google OAuth after Instagram onboarding: consume onboarding token, create user (no password), create workspace.
    */
   async googleSignup(profile: GoogleProfile, onboardingToken: string): Promise<SignupResult> {
-    const payload = await this.deps.onboardingSessionStore.consume(onboardingToken);
-    if (!payload) {
-      throw new InvalidOnboardingTokenError();
-    }
-
     const existingUser = await this.deps.userRepo.findByEmail(profile.email);
     if (existingUser) {
       throw new AppError('Email already in use', 409);
+    }
+
+    const payload = await this.deps.onboardingSessionStore.consume(onboardingToken);
+    if (!payload) {
+      throw new InvalidOnboardingTokenError();
     }
 
     const user = await this.deps.userRepo.create({

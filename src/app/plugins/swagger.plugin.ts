@@ -1,8 +1,9 @@
 // OpenAPI/Swagger docs.
 import type { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 import swagger from '@fastify/swagger';
 
-export async function swaggerPlugin(app: FastifyInstance): Promise<void> {
+export const swaggerPlugin = fp(async (app: FastifyInstance) => {
   await app.register(swagger, {
     openapi: {
       info: {
@@ -13,4 +14,4 @@ export async function swaggerPlugin(app: FastifyInstance): Promise<void> {
       servers: [{ url: '/', description: 'Current' }],
     },
   });
-}
+});

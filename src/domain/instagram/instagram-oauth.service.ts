@@ -72,7 +72,7 @@ export class InstagramOAuthService {
     const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days typical for long-lived
 
     const payload: OnboardingSessionPayload = {
-      igUserId,
+      igUserId: String(igUserId),
       igUsername: profile.username,
       accountType,
       scopes: ONBOARD_SCOPES.split(',').map((s) => s.trim()),

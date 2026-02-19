@@ -1,9 +1,10 @@
 // Redis-backed rate limiter.
 import type { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 import rateLimit from '@fastify/rate-limit';
 import { getRedisClient } from '../../infra/redis/redis.client.js';
 
-export async function rateLimitPlugin(app: FastifyInstance): Promise<void> {
+export const rateLimitPlugin = fp(async (app: FastifyInstance) => {
   const redis = getRedisClient();
   await app.register(rateLimit, {
     max: 100,
@@ -11,4 +12,4 @@ export async function rateLimitPlugin(app: FastifyInstance): Promise<void> {
     redis,
     skipOnError: true,
   });
-}
+});
